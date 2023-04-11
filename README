@@ -1,1 +1,9 @@
-CircuitOps
+## CircuitOps
+
+
+# Dependency
+pandas
+graph-tool
+numpy
+dgl
+openroad
