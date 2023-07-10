@@ -17,11 +17,15 @@ using its AI-friendly data structures and interfaces. CircuitOps also
 provides a gRPC-based data transfer method facilitating inference
 of GAI models in production deployment.
 
-
+<img src="CircuitOps-overview.png"
+     alt="Markdown Monster icon"
+     style="float: left; margin-right: 10px;" />
 
 ## Dependency
-pandas
-graph-tool
-numpy
-dgl
-openroad
+    dgl==0.9.1
+    networkx==2.6.3
+    numpy==1.22.4
+    pandas==2.0.3
+    torch==1.12.1
+    tqdm==4.53.0
+    graph-tool==2.57
