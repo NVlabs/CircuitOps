@@ -1,0 +1,82 @@
+// SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//
+// gRPC + Protobuf interface for Buffer Insertion
+//
+
+syntax = "proto3";
+
+package BufferInsertionProtocol;
+
+//
+// Messages
+//
+
+//-----------------------------------------------------------------------------
+message Location {
+  float x = 1;
+  float y = 2;
+}
+
+message CellToken {
+  string name = 1;
+  uint32 libcell = 2;
+  float input_slew = 3;
+  float input_capa = 4;
+  Location loc = 5;
+  bool is_driver = 6;
+  float delay_tgt = 7;
+  bool parity = 8;
+}
+
+message NetQuery {
+  string net_name = 1;
+  repeated CellToken tokens = 2;
+}
+
+//-----------------------------------------------------------------------------
+message BufferInfo {
+  string name = 1;
+  uint32 libcell = 2;
+  Location loc = 3;
+}
+
+message Edge {
+  string src = 1;
+  string snk = 2;
+}
+
+message NetAnswer {
+  string net_name = 1;
+  repeated BufferInfo buffers = 2;
+  repeated Edge edges = 3;
+}
+
+//-----------------------------------------------------------------------------
+message BatchQuery { repeated NetQuery queries = 1; }
+
+message BatchAnswer { repeated NetAnswer answers = 1; }
+
+//-----------------------------------------------------------------------------
+
+//
+// gRPC routine.
+//
+
+service BufFormer {
+  rpc CallBufFormer(BatchQuery) returns (BatchAnswer) {}
+}
+
