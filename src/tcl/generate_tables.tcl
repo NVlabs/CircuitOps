@@ -14,6 +14,7 @@
 # limitations under the License.
 
 source "./src/tcl/set_design.tcl"
+source "./src/tcl/helpers.tcl"
 
 load_design $DEF_FILE $NETLIST_FILE $LIB_FILES $TECH_LEF_FILE $LEF_FILES $SDC_FILE $DESIGN_NAME $SPEF_FILE 
 
