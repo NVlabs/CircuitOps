@@ -14,129 +14,45 @@
 # limitations under the License.
 
 
+
 import re
 import pandas as pd
 import numpy as np
-import copy
 from graph_tool.all import *
 from numpy.random import *
-import time
 import graph_tool as gt
-import dgl
-import torch
 import pickle
 import sys
 from helper import (
-    read_tables,
-    rm_invalid_pins_cells,
-    assign_gate_size_class,
-    rename_cells,
-    rename_nets,
-    generate_edge_df,
     get_large_components,
     get_subgraph,
-    get_cell_graph,
     get_cell_graph_from_cells,
 )
+from generate_LPG_from_tables import generate_LPG_from_tables
 
-cell_cnt_th = 2000
+cell_cnt_th = 20
 
 ### extract buffer trees from netlist ###
-### inputs: data_root, design name, mcmm name
+### inputs: data_root, design name
 ### output:
 ### nodes: celll/pin id, v_tree_id, v_BT_height, v_bt_s, v_x, v_y, v_arr, v_tran, v_polarity, v_libcell_id
 ### edges: src, tar, e_tree_id
-def BT_sampling(data_root, design, mcmm):
-    pin_df, cell_df, net_df, pin_edge_df, cell_edge_df, net_edge_df, net_cell_edge_df, cell2cell_edge_df, fo4_df = read_tables(data_root, design, mcmm)
-
-    ### add is_macro, is_seq to pin_df, change pin_dir to bool
-    cell_type_df = cell_df.loc[:,["name", "is_macro", "is_seq"]]
-    cell_type_df = cell_type_df.rename(columns={"name":"cellname"})
-    pin_df = pin_df.merge(cell_type_df, on="cellname", how="left")
-    pin_df["is_macro"] = pin_df["is_macro"].fillna(False)
-    pin_df["is_seq"] = pin_df["is_seq"].fillna(False)
-    pin_df["dir"] = (pin_df["dir"] == "input")
-
-    ### remove invalid pins and cells
-    pin_df, cell_df = rm_invalid_pins_cells(pin_df, cell_df)
-
-    ### processing fo4 table
-    fo4_df["group_id"] = pd.factorize(fo4_df.cell_id)[0] + 1
-    fo4_df["HVT"] = fo4_df.cell.str.contains("HVT")
-    fo4_df["CK"] = fo4_df.cell.str.contains("CK")
-    fo4_df["libcell_id"] = range(fo4_df.shape[0])
-
-    ### assign cell size class and min size libcellname
-    fo4_df = assign_gate_size_class(fo4_df)
-
-    ### get min size cell
-    cell_fo4 = fo4_df.loc[:,["cell", "min_size_cell"]]
-    cell_fo4 = cell_fo4.rename(columns={"cell":"ref"})
-    cell_df = cell_df.merge(cell_fo4, on="ref", how="left")
-    seq_macro_mask = (cell_df.is_seq == True) | (cell_df.is_macro == True)
-    cell_df.loc[seq_macro_mask, ["min_size_cell"]] = cell_df.loc[seq_macro_mask, ["ref"]].values
-    idx = cell_df[pd.isna(cell_df.min_size_cell)].index
-    cell_df.loc[idx, ["min_size_cell"]] = cell_df.loc[idx, ["ref"]].values
-
-    ### get cell center loc
-    cell_df["x"] = 0.5*(cell_df.x0 + cell_df.x1)
-    cell_df["y"] = 0.5*(cell_df.y0 + cell_df.y1)
-
-    ### add is_buf is_inv to pin_df
-    cell_type_df = cell_df.loc[:,["name", "is_buf", "is_inv"]]
-    cell_type_df = cell_type_df.rename(columns={"name":"cellname"})
-    pin_df = pin_df.merge(cell_type_df, on="cellname", how="left")
-    pin_df["is_buf"] = pin_df["is_buf"].fillna(False)
-    pin_df["is_inv"] = pin_df["is_inv"].fillna(False)
-
-    pin_df.loc[pin_df.cap == 0.0, ["cap"]] = -1.0
-    pin_df.loc[pin_df.maxcap > 10, ["maxcap"]] = -1.0
-
-    ### rename cells and nets
-    cell_df, pin_df = rename_cells(cell_df, pin_df)
-    net_df, pin_df = rename_nets(net_df, pin_df)
+def BT_sampling(data_root, design):
+    g, pin_df, cell_df, net_df, fo4_df, pin_edge_df, cell_edge_df, \
+        net_edge_df, net_cell_edge_df, edge_df, v_type, e_type \
+        = generate_LPG_from_tables(data_root, design)
 
     ### get dimensions
     N_pin, _ = pin_df.shape
     N_cell, _ = cell_df.shape
     N_net, _ = net_df.shape
     total_v_cnt = N_pin+N_cell+N_net
-    pin_df['id'] = range(N_pin)
-    cell_df['id'] = range(N_pin, N_pin+N_cell)
-    net_df['id'] = range(N_pin+N_cell, total_v_cnt)
 
-    ### generate edge_df
-    pin_edge_df, cell_edge_df, net_edge_df, net_cell_edge_df, cell2cell_edge_df, edge_df = \
-        generate_edge_df(pin_df, cell_df, net_df, pin_edge_df, cell_edge_df, net_edge_df, net_cell_edge_df, cell2cell_edge_df)
-
-    ### get edge dimensions
     N_pin_edge, _ = pin_edge_df.shape
     N_cell_edge, _ = cell_edge_df.shape
     N_net_edge, _ = net_edge_df.shape
     N_net_cell_edge, _ = net_cell_edge_df.shape
-    N_cell2cell_edge, _ = cell2cell_edge_df.shape
-    total_e_cnt = N_pin_edge+N_cell_edge+N_net_edge+N_net_cell_edge+N_cell2cell_edge
-
-    edge_df["e_type"] = 0 # pin
-    # edge_df.loc[0:N_pin_edge,["is_net"]] = pin_edge_df.loc[:, "is_net"]
-    edge_df.loc[N_pin_edge : N_pin_edge+N_cell_edge, ["e_type"]] = 1 # cell
-    edge_df.loc[N_pin_edge+N_cell_edge : N_pin_edge+N_cell_edge+N_net_edge, ["e_type"]] = 2 # net
-    edge_df.loc[N_pin_edge+N_cell_edge+N_net_edge : N_pin_edge+N_cell_edge+N_net_edge+N_net_cell_edge, ["e_type"]] = 3 # net_cell
-    edge_df.loc[N_pin_edge+N_cell_edge+N_net_edge+N_net_cell_edge : total_e_cnt, ["e_type"]] = 4 # cell2cell
-
-    ### generate graph
-    g = Graph()
-    g.add_vertex(total_v_cnt)
-    v_type = g.new_vp("int")
-    v_type.a[0:N_pin] = 0 # pin
-    v_type.a[N_pin:N_pin+N_cell] = 1 # cell
-    v_type.a[N_pin+N_cell:total_v_cnt] = 2 # net
-
-    ### add edge to graph
-    e_type = g.new_ep("int")
-    print("num of nodes, num of edges: ", g.num_vertices(), g.num_edges())
-    g.add_edge_list(edge_df.values.tolist(), eprops=[e_type])
-    print("num of nodes, num of edges: ", g.num_vertices(), g.num_edges())
+    total_e_cnt = N_pin_edge+N_cell_edge+N_net_edge+N_net_cell_edge
 
     ### add edge props
     e_id = g.new_ep("int")
@@ -155,9 +71,9 @@ def BT_sampling(data_root, design, mcmm):
     v_isbuf.a[0:N_pin] = pin_df["is_buf"].to_numpy()
     v_isinv.a[0:N_pin] = pin_df["is_inv"].to_numpy()
     v_isseq.a[0:N_pin] = pin_df["is_seq"].to_numpy()
-    v_pin_isport.a[0:N_pin] = pin_df["is_port"].to_numpy()
-    v_pin_isstart.a[0:N_pin] = pin_df["is_start"].to_numpy()
-    v_pin_isend.a[0:N_pin] = pin_df["is_end"].to_numpy()
+    # v_pin_isport.a[0:N_pin] = pin_df["is_port"].to_numpy()
+    # v_pin_isstart.a[0:N_pin] = pin_df["is_start"].to_numpy()
+    # v_pin_isend.a[0:N_pin] = pin_df["is_end"].to_numpy()
     v_dir.a[0:N_pin] = pin_df["dir"].to_numpy()
     v_ismacro.a[0:N_pin] = pin_df["is_macro"].to_numpy()
 
@@ -179,6 +95,25 @@ def BT_sampling(data_root, design, mcmm):
     pin_ismacro = v_ismacro.a[0:N_pin]
     mask = (pin_isseq==True)| (pin_ismacro==True)
     pin_cellid[mask] = pin_df[mask].id ### for pins in macro and seq, pin_cellid = pin id
+
+    ### add cell2cell edges
+    edges = g.get_edges(eprops=[e_type])
+    mask = edges[:,-1] == 0
+    edges = edges[mask]
+    mask = v_dir.a[edges[:,0]]==False
+    edges = edges[mask]
+    src = edges[:,0]
+    tar = edges[:,1]
+    new_src = pin_cellid[src]
+    new_tar = pin_cellid[tar]
+    N = src.shape[0]
+    temp = np.zeros([N,4])
+    temp[:,0] = pin_cellid[src]
+    temp[:,1] = pin_cellid[tar]
+    temp[:,2] = 4
+    temp[:,3] = range(total_e_cnt, total_e_cnt+N)
+    g.add_edge_list(temp, eprops=[e_type, e_id])
+    total_e_cnt += N
 
     ### add net id to pin_df
     net_temp = net_df.loc[:, ["name", "id"]]
@@ -209,9 +144,6 @@ def BT_sampling(data_root, design, mcmm):
     mask = (v_ar[src, -1] == True) & (v_ar[tar, -1] == True)
     e_label.a[idx[mask]] = True
     u = get_subgraph(g_pin, v_valid_pins, e_label)
-
-    # ### get pre-opt cell2cell graph
-    # u_cells, u_cell_g = get_cell_graph(u, pin_cellid, g, e_type, e_id)
 
     ### get buffer tree start and end points
     v_bt_s = g.new_vp("bool")
@@ -311,7 +243,6 @@ def BT_sampling(data_root, design, mcmm):
     v_bt_e.a[tree_end_list_new] = True
     print(v_bt_e.a.sum())
 
-
     ### get all buffer pins in BTs
     mask = (v_tree_id.a>0) & ((v_isbuf.a == True) | (v_isinv.a == True))
     pins = v_all[mask]
@@ -330,8 +261,6 @@ def BT_sampling(data_root, design, mcmm):
     src = e_ar[:,0]
     e_tree_id.a[e_ar[:,-1]] = v_tree_id.a[src]
 
-    # comp1, hist1 = label_components(buf_cell_g, directed=False)
-    # print(len(hist1))
 
     ### get edge from BT start pin to buf and from buf to BT end pin
     e_ar = u.get_edges(eprops=[e_tree_id, e_type, e_id])
@@ -358,6 +287,7 @@ def BT_sampling(data_root, design, mcmm):
     # total_e_cnt += M
     g.add_edge_list(edges.tolist(), eprops=[e_tree_id, e_type, e_id])
 
+
     ### generate BT graphs
     v_mask_BT = g.new_vp("bool")
     v_mask_BT.a = False
@@ -370,8 +300,6 @@ def BT_sampling(data_root, design, mcmm):
     temp_e = buf_cell_g.get_edges(eprops=[e_id]) ### bufs <-> bufs
     e_mask_BT.a[temp_e[:,-1]] = True
     BT_g = get_subgraph(g, v_mask_BT, e_mask_BT)
-    # comp1, hist1 = label_components(BT_g, directed=False)
-    # print(hist1)
 
     ### get height of nodes in BTs
     v_BT = BT_g.get_vertices()
@@ -490,11 +418,10 @@ def BT_sampling(data_root, design, mcmm):
 if __name__ == "__main__":
     data_root = sys.argv[1]
     design = sys.argv[2]
-    mcmm = sys.argv[3]
-    output_path = sys.argv[4]
-    nodes, edges = BT_sampling(data_root, design, mcmm)
+    output_path = sys.argv[3]
+    nodes, edges = BT_sampling(data_root, design)
     ### save BTs
-    with open(output_path + 'sample_nodes.pkl', 'wb') as f:
+    with open(output_path + 'BT_nodes.pkl', 'wb') as f:
         pickle.dump(nodes, f, pickle.HIGHEST_PROTOCOL)
-    with open(output_path + 'sample_edges.pkl', 'wb') as f:
+    with open(output_path + 'BT_edges.pkl', 'wb') as f:
         pickle.dump(edges, f, pickle.HIGHEST_PROTOCOL)

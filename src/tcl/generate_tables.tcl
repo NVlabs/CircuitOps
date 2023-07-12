@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 set DESIGN_NAME gcd
 set PLATFORM nangate45
 
@@ -143,7 +142,7 @@ proc print_net_property_entry {outfile net_props} {
 proc print_libcell_property_entry {outfile libcell_props} {
   set libcell_entry {}
   lappend libcell_entry [dict get $libcell_props "libcell_name"];#libcell_name
-  lappend libcell_entry "-1";#func. id (*8)
+  lappend libcell_entry [dict get $libcell_props "func_id"];##func. id (*8)
   lappend libcell_entry [dict get $libcell_props "libcell_area"];#libcell_area
   lappend libcell_entry "-1";#worst_input_cap(*5)
   lappend libcell_entry "-1";#libcell_leakage
@@ -295,6 +294,23 @@ close $net_pin_outfile
 close $pin_pin_outfile
 
 
+proc find_func_id {lib_dict libcell_name} {
+  set max_func_id -1
+  dict for {lib_id func_id} $lib_dict {
+    if {$func_id > $max_func_id} {
+      set max_func_id $func_id
+    }
+    set cell1 [::sta::find_liberty_cell $lib_id]
+    set cell2 [::sta::find_liberty_cell $libcell_name]
+    if {$cell1 == "" || $cell2 == "" || $cell1 == "NULL" || $cell2 == "NULL"} {continue}
+    if {[::sta::equiv_cells $cell1 $cell2]} {
+      return [list 1 $func_id]
+    }
+  }
+  set func_id [expr $max_func_id + 1]
+  return [list 0 $func_id]
+}
+
 
 #libcell table
 set libcell_outfile [open $libcell_file w]
@@ -302,7 +318,16 @@ set header {libcell_name func_id libcell_area worst_input_cap libcell_leakage fo
 puts $libcell_outfile [join $header ","]
 
 set libs [$db getLibs]
+set func_id -1
+dict set func_dict start -1
 foreach lib $libs {
+  set lib_name [$lib getName]
+  if {[string first "NangateOpenCellLibrary"  $lib_name] != -1} {
+    set sta_lib [get_libs "NangateOpenCellLibrary"]
+  } else {
+    set sta_lib [get_libs $lib_name]
+  }
+  ::sta::make_equiv_cells $sta_lib
   set lib_masters [$lib getMasters]
   foreach master $lib_masters {
     set libcell_name [$master getName]
@@ -310,7 +335,15 @@ foreach lib $libs {
     set libcell_area [expr [$master getHeight] * [$master getWidth]]
     dict set libcell_dict libcell_area $libcell_area
 
+    set res [find_func_id $func_dict $libcell_name]
+    set func_id [lindex $res 1]
+    if {[lindex $res 0] == 0} {
+      dict set func_dict $libcell_name $func_id
+    }
+    dict set libcell_dict func_id $func_id
+
     print_libcell_property_entry $libcell_outfile $libcell_dict
+    incr a
   }
 }
 close $libcell_outfile
