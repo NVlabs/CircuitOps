@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -13,7 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+=======
+>>>>>>> fb9b32e1618c028526e35d2da945a9d167fae5e8
 set DESIGN_NAME gcd
+#set DESIGN_NAME aes
+#set DESIGN_NAME bp_fe
+#set DESIGN_NAME bp_be
+
 set PLATFORM nangate45
 
 set DEF_FILE ./designs/$PLATFORM/$DESIGN_NAME/6_final.def
@@ -25,14 +32,14 @@ set SDC_FILE ./designs/$PLATFORM/$DESIGN_NAME/6_final.sdc
 set NETLIST_FILE  ./designs/$PLATFORM/$DESIGN_NAME/6_final.v
 set SPEF_FILE ./designs/$PLATFORM/$DESIGN_NAME/6_final.spef
 
-set cell_file "tables/gcd_cell_properties.csv"
-set libcell_file "tables/gcd_libcell_properties.csv"
-set pin_file "tables/gcd_pin_properties.csv"
-set net_file "tables/gcd_net_properties.csv"
-set cell_pin_file "tables/gcd_cell_pin_edge.csv"
-set net_pin_file "tables/gcd_net_pin_edge.csv"
-set pin_pin_file "tables/gcd_pin_pin_edge.csv"
-set cell_net_file "tables/gcd_cell_net_edge.csv"
+set cell_file "IRs/${DESIGN_NAME}_cell_properties.csv"
+set libcell_file "IRs/${DESIGN_NAME}_libcell_properties.csv"
+set pin_file "IRs/${DESIGN_NAME}_pin_properties.csv"
+set net_file "IRs/${DESIGN_NAME}_net_properties.csv"
+set cell_pin_file "IRs/${DESIGN_NAME}_cell_pin_edge.csv"
+set net_pin_file "IRs/${DESIGN_NAME}_net_pin_edge.csv"
+set pin_pin_file "IRs/${DESIGN_NAME}_pin_pin_edge.csv"
+set cell_net_file "IRs/${DESIGN_NAME}_cell_net_edge.csv"
 
 
 proc load_design {def netlist libs tech_lef lefs sdc design spef} {
@@ -56,7 +63,7 @@ proc load_design {def netlist libs tech_lef lefs sdc design spef} {
   global_connect
 }
 
-load_design $DEF_FILE $NETLIST_FILE $LIB_FILES $TECH_LEF_FILE $LEF_FILES $SDC_FILE $DESIGN_NAME $SPEF_FILE
+load_design $DEF_FILE $NETLIST_FILE $LIB_FILES $TECH_LEF_FILE $LEF_FILES $SDC_FILE $DESIGN_NAME $SPEF_FILE 
 
 
 set db [ord::get_db]
@@ -88,18 +95,18 @@ proc print_ip_op_pairs {outfile inputs outputs is_net} {
 
 proc print_pin_property_entry {outfile pin_props} {
   set pin_entry {}
-  lappend pin_entry [dict get $pin_props "pin_name"];#pin_name
+  lappend pin_entry [dict get $pin_props "pin_name"];#pin_name 
   lappend pin_entry "-1";#x
   lappend pin_entry "-1";#y
   lappend pin_entry "-1";#is_port
   lappend pin_entry "-1";#is_startpoint
   lappend pin_entry "-1";#is_endpoint
-  lappend pin_entry [dict get $pin_props "dir"];#dir
+  lappend pin_entry [dict get $pin_props "dir"];#dir 
   lappend pin_entry "-1";#maxcap
   lappend pin_entry "-1";#maxtran
   lappend pin_entry "-1";#num_reachable_endpoint
-  lappend pin_entry [dict get $pin_props "cell_name"];#cell_name
-  lappend pin_entry [dict get $pin_props "net_name"];#net_name
+  lappend pin_entry [dict get $pin_props "cell_name"];#cell_name 
+  lappend pin_entry [dict get $pin_props "net_name"];#net_name 
   lappend pin_entry "-1";#pin_tran
   lappend pin_entry [dict get $pin_props "pin_slack"];#pin_slack
   lappend pin_entry "-1";#pin_arr
@@ -109,7 +116,7 @@ proc print_pin_property_entry {outfile pin_props} {
 
 proc print_cell_property_entry {outfile cell_props} {
   set cell_entry {}
-  lappend cell_entry [dict get $cell_props "cell_name"];#cell_name
+  lappend cell_entry [dict get $cell_props "cell_name"];#cell_name 
   lappend cell_entry [dict get $cell_props "is_seq"];#is_seq
   lappend cell_entry [dict get $cell_props "is_macro"];#is_macro
   lappend cell_entry "-1";#is_in_clk
@@ -119,7 +126,7 @@ proc print_cell_property_entry {outfile cell_props} {
   lappend cell_entry [dict get $cell_props "y1"];#y1
   lappend cell_entry [dict get $cell_props "is_buf"];#is_buf
   lappend cell_entry [dict get $cell_props "is_inv"];#is_inv
-  lappend cell_entry [dict get $cell_props "libcell_name"];#libcell_name
+  lappend cell_entry [dict get $cell_props "libcell_name"];#libcell_name 
   lappend cell_entry [dict get $cell_props "cell_static_power"];#cell_static_power
   lappend cell_entry [dict get $cell_props "cell_dynamic_power"];#cell_dynamic_power
   puts $outfile [join $cell_entry ","]
@@ -151,14 +158,6 @@ proc print_libcell_property_entry {outfile libcell_props} {
   puts $outfile [join $libcell_entry ","]
 }
 
-
-#set design_file "data/gcd.odb"
-
-#set libfiles [glob platform/nangate45/lib/*.lib]
-
-
-#load_design $design_file data/gcd.sdc $libfiles
-
 #loop
 #set inst  [lindex $insts 0]
 set cell_outfile [open $cell_file w]
@@ -176,10 +175,11 @@ puts $cell_pin_outfile "src,tar"
 puts $cell_net_outfile "src,tar"
 puts $pin_pin_outfile "src,tar,is_net"
 
+puts " NUMBER OF INSTANCES [llength $insts]"
 foreach inst $insts {
   set cell_name [$inst getName]
   dict set cell_dict cell_name $cell_name
-
+  
   # cell properties
   #location
   set BBox [$inst getBBox]
@@ -190,7 +190,7 @@ foreach inst $insts {
 
   set master_cell [$inst getMaster]
   set master_name [$master_cell getName]
-  dict set cell_dict libcell_name $master_name
+  dict set cell_dict libcell_name $master_name 
   dict set cell_dict is_inv [get_property [get_lib_cells $master_name] is_inverter]
   dict set cell_dict is_buf [get_property [get_lib_cells $master_name] is_buffer]
   #set is_seq [$master_cell isSequential]; # NOT POPULATED
@@ -207,7 +207,7 @@ foreach inst $insts {
 
   foreach ITerm $inst_ITerms {
     #pin properties
-    set pin_name [get_ITerm_name $ITerm]
+    set pin_name [get_ITerm_name $ITerm] 
     set pin_net_name [[$ITerm getNet] getName]
     dict set pin_dict pin_name $pin_name
     dict set pin_dict cell_name $cell_name
@@ -260,19 +260,19 @@ foreach net $nets {
   dict set net_dict net_name $net_name
 
   set wire [$net getWire]
-
+  
   #net properties$
   dict set net_dict net_cap [$net getTotalCapacitance]
   dict set net_dict net_res [$net getTotalResistance]
   dict set net_dict net_coupling [$net getTotalCouplingCap]
   #dict set net_dict net_route_length [$wire getLength]
-
+  
   set input_pins {}
   set output_pins {}
   #net-pin
   set net_ITerms [$net getITerms]
   foreach ITerm $net_ITerms {
-    set ITerm_name [get_ITerm_name $ITerm]
+    set ITerm_name [get_ITerm_name $ITerm] 
     #set is_macro [[[$ITerm getInst] getMaster] isBlock]
     #set is_seq [[[$ITerm getInst] getMaster] isSequential]
     if {[$ITerm isInputSignal]} {
@@ -285,8 +285,8 @@ foreach net $nets {
   }
   print_ip_op_pairs $pin_pin_outfile $input_pins $output_pins 1
   #dict set net_dict fanout [expr [$net getITermCount] - 1]
-  dict set net_dict fanout [llength output_pins]
-
+  dict set net_dict fanout [llength $output_pins] 
+  
   print_net_property_entry $net_outfile $net_dict
 }
 close $net_outfile
@@ -298,7 +298,11 @@ proc find_func_id {lib_dict libcell_name} {
   set max_func_id -1
   dict for {lib_id func_id} $lib_dict {
     if {$func_id > $max_func_id} {
+<<<<<<< HEAD
       set max_func_id $func_id
+=======
+      set max_func_id $func_id 
+>>>>>>> fb9b32e1618c028526e35d2da945a9d167fae5e8
     }
     set cell1 [::sta::find_liberty_cell $lib_id]
     set cell2 [::sta::find_liberty_cell $libcell_name]
@@ -327,7 +331,11 @@ foreach lib $libs {
   } else {
     set sta_lib [get_libs $lib_name]
   }
+<<<<<<< HEAD
   ::sta::make_equiv_cells $sta_lib
+=======
+  ::sta::make_equiv_cells $sta_lib 
+>>>>>>> fb9b32e1618c028526e35d2da945a9d167fae5e8
   set lib_masters [$lib getMasters]
   foreach master $lib_masters {
     set libcell_name [$master getName]
