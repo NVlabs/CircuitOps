@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # SPDX-FileCopyrightText: Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -14,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-=======
->>>>>>> fb9b32e1618c028526e35d2da945a9d167fae5e8
 set DESIGN_NAME gcd
 #set DESIGN_NAME aes
 #set DESIGN_NAME bp_fe
@@ -298,11 +295,7 @@ proc find_func_id {lib_dict libcell_name} {
   set max_func_id -1
   dict for {lib_id func_id} $lib_dict {
     if {$func_id > $max_func_id} {
-<<<<<<< HEAD
-      set max_func_id $func_id
-=======
       set max_func_id $func_id 
->>>>>>> fb9b32e1618c028526e35d2da945a9d167fae5e8
     }
     set cell1 [::sta::find_liberty_cell $lib_id]
     set cell2 [::sta::find_liberty_cell $libcell_name]
@@ -331,11 +324,7 @@ foreach lib $libs {
   } else {
     set sta_lib [get_libs $lib_name]
   }
-<<<<<<< HEAD
-  ::sta::make_equiv_cells $sta_lib
-=======
   ::sta::make_equiv_cells $sta_lib 
->>>>>>> fb9b32e1618c028526e35d2da945a9d167fae5e8
   set lib_masters [$lib getMasters]
   foreach master $lib_masters {
     set libcell_name [$master getName]
