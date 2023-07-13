@@ -29,7 +29,8 @@ Fig. 1: CircuitOps overview. (a) shows the structure of CircuitOps; (b) illustra
 Download the CircuitOps repository as shown below:
 
 
-``` git clone --recursive https://github.com/NVlabs/CircuitOps.git
+```
+git clone --recursive https://github.com/NVlabs/CircuitOps.git
 cd CircuitOps
 ```
 
