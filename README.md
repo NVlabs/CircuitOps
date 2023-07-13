@@ -17,17 +17,52 @@ using its AI-friendly data structures and interfaces. CircuitOps also
 provides a gRPC-based data transfer method facilitating inference
 of GAI models in production deployment.
 
-<img src="CircuitOps-overview.png"
+<img src="etc/CircuitOps-overview.png"
      alt="Markdown Monster icon"
      style="float: left; margin-right: 10px;" />
 
 Fig. 1: CircuitOps overview. (a) shows the structure of CircuitOps; (b) illustrates the netlist labeled property graph backed by relational tables.
 
-## Dependency
-    dgl==0.9.1
-    networkx==2.6.3
-    numpy==1.22.4
-    pandas==2.0.3
-    torch==1.12.1
-    tqdm==4.53.0
-    graph-tool==2.57
+
+## Getting Started
+
+### Dependencies
+python3.7
+pip3
+OpenROAD
+
+
+``` git clone --recursive https://github.com/NVlabs/CircuitOps.git```
+
+
+### Install OpenROAD
+
+Refer to the dependencies of the OpenROAD Project and instrcution here for dependencies.
+
+```
+cd CircuitOps/src/OpenROAD
+mkdir build
+cd build
+cmake ..
+make -j
+```
+
+### Install CircuitOps in Bash
+
+
+```
+python3 -m venv circuitops
+source openpdn/bin/activate
+pip3 install -r requirements.txt
+```
+
+### Usage
+
+
+#### Generate IRs
+
+
+#### Generate LPG
+
+
+#### Generate Datasets
