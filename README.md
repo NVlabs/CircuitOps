@@ -26,6 +26,7 @@ Fig. 1: CircuitOps overview. (a) shows the structure of CircuitOps; (b) illustra
 
 ## Getting Started
 
+Download the CircuitOps repository as shown below:
 
 
 ``` git clone --recursive https://github.com/NVlabs/CircuitOps.git```
@@ -45,7 +46,10 @@ The following dependencies are needed by CircuitOps. OpenROAD is required for ED
 
 #### Install OpenROAD
 
-Refer to the dependencies of the OpenROAD Project and instrcutions here incase of issues for OpenROAD installation.
+Refer to the dependencies of the OpenROAD Project and instrcutions [here](https://openroad.readthedocs.io/en/latest/main/README.html#build-openroad).
+
+We use OpenROAD to read in standard EDA files and generate relational tables as IRs. 
+
 
 TLDR instructions to build OpenROAD is listed below:
 
@@ -60,10 +64,11 @@ make -j
 
 #### Install CircuitOps in Bash
 
+From the IRs, CircuitOps uses the relational tables generated from OpenROAD and creates LPGs and datasets.  Installation of Python scripts of Circuit ops in described below through a virtual environment and pip. 
 
 ```
 python3 -m venv circuitops
-source openpdn/bin/activate
+source circuitops/bin/activate
 pip3 install -r requirements.txt
 ```
 
@@ -71,9 +76,16 @@ pip3 install -r requirements.txt
 
 
 #### Generate IRs from OpenROAD
+ 
+##### Set design and platform
 
+Set a new design and/or platform in ./src/tcl/set_design.tcl
 
-#### Generate LPGs
+##### Run OpenROAD and TCL scripts to generate relational tables
+
+```./path/to/openroad/binary/ ./src/tcl/generate_tables.tcl```
+
+##### Generate LPGs
 
 
 #### Generate Datasets
