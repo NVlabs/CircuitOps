@@ -26,18 +26,29 @@ Fig. 1: CircuitOps overview. (a) shows the structure of CircuitOps; (b) illustra
 
 ## Getting Started
 
-### Dependencies
-python3.7
-pip3
-OpenROAD
 
 
 ``` git clone --recursive https://github.com/NVlabs/CircuitOps.git```
 
 
-### Install OpenROAD
+### Install CircuitOps
 
-Refer to the dependencies of the OpenROAD Project and instrcution here for dependencies.
+
+#### Dependencies
+
+The following dependencies are needed by CircuitOps. OpenROAD is required for EDA tools file parsing and generating properties. 
+
+- python3.7
+- pip3
+- OpenROAD
+
+
+#### Install OpenROAD
+
+Refer to the dependencies of the OpenROAD Project and instrcutions here incase of issues for OpenROAD installation.
+
+TLDR instructions to build OpenROAD is listed below:
+
 
 ```
 cd CircuitOps/src/OpenROAD
@@ -47,7 +58,7 @@ cmake ..
 make -j
 ```
 
-### Install CircuitOps in Bash
+#### Install CircuitOps in Bash
 
 
 ```
@@ -56,13 +67,18 @@ source openpdn/bin/activate
 pip3 install -r requirements.txt
 ```
 
-### Usage
+### Use CircuitOps
 
 
-#### Generate IRs
+#### Generate IRs from OpenROAD
 
 
-#### Generate LPG
+#### Generate LPGs
 
 
 #### Generate Datasets
+
+
+## Cite this work
+
+
