@@ -91,8 +91,9 @@ The following command to generate the relations tables in the ./IRs/ directory.
 
 
 #### Generate Datasets
-cd src/python
-python BT_sampling_OpenROAD ../../IRs/nangate45/gcd/ ../../datasets/
+```cd src/python```
+
+```python BT_sampling_OpenROAD ../../IRs/nangate45/gcd/ ../../datasets/```
 
 #### gRPC-based Data Transfer
 
