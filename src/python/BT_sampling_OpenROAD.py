@@ -37,10 +37,10 @@ cell_cnt_th = 20
 ### output:
 ### nodes: celll/pin id, v_tree_id, v_BT_height, v_bt_s, v_x, v_y, v_arr, v_tran, v_polarity, v_libcell_id
 ### edges: src, tar, e_tree_id
-def BT_sampling(data_root, design):
+def BT_sampling(data_root):
     g, pin_df, cell_df, net_df, fo4_df, pin_edge_df, cell_edge_df, \
         net_edge_df, net_cell_edge_df, edge_df, v_type, e_type \
-        = generate_LPG_from_tables(data_root, design)
+        = generate_LPG_from_tables(data_root)
 
     ### get dimensions
     N_pin, _ = pin_df.shape
@@ -417,9 +417,8 @@ def BT_sampling(data_root, design):
 
 if __name__ == "__main__":
     data_root = sys.argv[1]
-    design = sys.argv[2]
-    output_path = sys.argv[3]
-    nodes, edges = BT_sampling(data_root, design)
+    output_path = sys.argv[2]
+    nodes, edges = BT_sampling(data_root)
     ### save BTs
     with open(output_path + 'BT_nodes.pkl', 'wb') as f:
         pickle.dump(nodes, f, pickle.HIGHEST_PROTOCOL)

@@ -28,8 +28,8 @@ from helper import (
     generate_edge_df_OpenROAD,
 )
 
-def generate_LPG_from_tables(data_root, design):
-    pin_df, cell_df, net_df, pin_edge_df, cell_edge_df, net_edge_df, net_cell_edge_df, fo4_df = read_tables_OpenROAD(data_root, design)
+def generate_LPG_from_tables(data_root):
+    pin_df, cell_df, net_df, pin_edge_df, cell_edge_df, net_edge_df, net_cell_edge_df, fo4_df = read_tables_OpenROAD(data_root)
 
     #### rename dfs
     pin_df = pin_df.rename(columns={"pin_name":"name", "cell_name":"cellname", "net_name":"netname", \

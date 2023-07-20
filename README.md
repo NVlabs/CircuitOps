@@ -40,7 +40,7 @@ cd CircuitOps
 
 #### Dependencies
 
-The following dependencies are needed by CircuitOps. OpenROAD is required for EDA tools file parsing and generating properties. 
+The following dependencies are needed by CircuitOps. OpenROAD is required for EDA tools file parsing and generating properties.
 
 - python3.7
 - pip3
@@ -51,7 +51,7 @@ The following dependencies are needed by CircuitOps. OpenROAD is required for ED
 
 Refer to the dependencies of the OpenROAD Project and instrcutions [here](https://openroad.readthedocs.io/en/latest/main/README.html#build-openroad).
 
-We use OpenROAD to read in standard EDA files and generate relational tables as IRs. 
+We use OpenROAD to read in standard EDA files and generate relational tables as IRs.
 
 
 TLDR instructions to build OpenROAD is listed below:
@@ -78,21 +78,24 @@ pip3 install -r requirements.txt
 
 
 #### Generate IRs from OpenROAD
- 
+
 ##### Set design and platform
 
-Modify [set_design.tcl](./src/tcl/set_design.tcl) to name the design and platform. If you need to add more designs, add them to the designs directory and modify the set_design.tcl file appropriately. 
+Modify [set_design.tcl](./src/tcl/set_design.tcl) to name the design and platform. If you need to add more designs, add them to the designs directory and modify the set_design.tcl file appropriately.
 
 ##### Run OpenROAD and TCL scripts to generate relational tables
 
-The following command to generate the relations tables in the ./IRs/ directory. 
+The following command to generate the relations tables in the ./IRs/ directory.
 
 ```./path/to/binary/openroad ./src/tcl/generate_tables.tcl```
 
-##### Generate LPGs
-
 
 #### Generate Datasets
+cd src/python
+python BT_sampling_OpenROAD ../../IRs/nangate45/gcd/ ../../datasets/
+
+#### gRPC-based Data Transfer
+
 
 
 ## Cite this work

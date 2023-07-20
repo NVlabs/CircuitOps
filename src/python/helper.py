@@ -83,19 +83,30 @@ def read_tables(data_root, design, mcmm):
     return pin_df, cell_df, net_df, pin_edge_df, cell_edge_df, net_edge_df, net_cell_edge_df, cell2cell_edge_df, fo4_df
 
 ### generate pandas dataframes by reading csv files
-def read_tables_OpenROAD(data_root, design):
-    cell_edge_path = data_root  + design + "_cell_pin_edge.csv"
-    cell_path = data_root  + design + "_cell_properties.csv"
-    net_edge_path = data_root  + design + "_net_pin_edge.csv"
-    net_path = data_root  + design + "_net_properties.csv"
-    pin_edge_path = data_root  + design + "_pin_pin_edge.csv"
-    pin_path = data_root  + design + "_pin_properties.csv"
-    net_cell_edge_path = data_root  + design + "_cell_net_edge.csv"
+def read_tables_OpenROAD(data_root, design=None):
+    # cell_edge_path = data_root  + design + "_cell_pin_edge.csv"
+    # cell_path = data_root  + design + "_cell_properties.csv"
+    # net_edge_path = data_root  + design + "_net_pin_edge.csv"
+    # net_path = data_root  + design + "_net_properties.csv"
+    # pin_edge_path = data_root  + design + "_pin_pin_edge.csv"
+    # pin_path = data_root  + design + "_pin_properties.csv"
+    # net_cell_edge_path = data_root  + design + "_cell_net_edge.csv"
 
-    all_fo4_delay_path = data_root + "all_fo4_delay_new.txt"
+    # all_fo4_delay_path = data_root + "all_fo4_delay_new.txt"
+
+    cell_edge_path = data_root  + "cell_pin_edge.csv"
+    cell_path = data_root  + "cell_properties.csv"
+    net_edge_path = data_root  +  "net_pin_edge.csv"
+    net_path = data_root  + "net_properties.csv"
+    pin_edge_path = data_root  + "pin_pin_edge.csv"
+    pin_path = data_root  + "pin_properties.csv"
+    net_cell_edge_path = data_root  + "cell_net_edge.csv"
+
+    all_fo4_delay_path = data_root + "libcell_properties.csv"
 
     ### load tables
-    fo4_df = pd.read_table(all_fo4_delay_path, sep=',')
+    # fo4_df = pd.read_table(all_fo4_delay_path, sep=',')
+    fo4_df = pd.read_csv(all_fo4_delay_path)
 
     pin_df = pd.read_csv(pin_path)
     cell_df = pd.read_csv(cell_path)
