@@ -1,5 +1,5 @@
 # CircuitOps
-
+(Notice: This Github repository is currently in the progress of being developed and some files are still missing. We will try to complete it ASAP. Thanks for your patience!)
 ## Introduction
 
 CircuitOps is a data infrastructure to facilitate dataset generation and model deployment in Generative AI (GAI)-based circuit optimization tasks. It mainly has the following contributes:
@@ -93,7 +93,7 @@ The following command to generate the relations tables in the ./IRs/ directory.
 #### Generate Datasets
 ```cd src/python```
 
-```python BT_sampling_OpenROAD ../../IRs/nangate45/gcd/ ../../datasets/```
+```python BT_sampling_OpenROAD.py ../../IRs/nangate45/gcd/ ../../datasets/```
 
 #### gRPC-based Data Transfer
 
