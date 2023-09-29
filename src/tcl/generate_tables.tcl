@@ -25,9 +25,7 @@ set tech [ord::get_db_tech]
 set insts [$block getInsts]
 set nets [$block getNets]
 
-
 #loop
-#set inst  [lindex $insts 0]
 set cell_outfile [open $cell_file w]
 set header {cell_name is_seq is_macro is_in_clk x0 y0 x1 y1 is_buf is_inv libcell_name cell_static_power cell_dynamic_power}
 puts $cell_outfile [join $header ","]
@@ -71,14 +69,12 @@ foreach inst $insts {
   dict set cell_dict libcell_name $master_name 
   dict set cell_dict is_inv [get_property [get_lib_cells $master_name] is_inverter]
   dict set cell_dict is_buf [get_property [get_lib_cells $master_name] is_buffer]
-  #dict set cell_dict is_buf [get_property [get_lib_cells $master_name] is_buffer]
   set is_seq [expr [string first "DFF" $master_name] != -1]
   dict set cell_dict is_seq $is_seq
   set is_macro [$master_cell isBlock]; #POPULATED?
   dict set cell_dict is_macro $is_macro
   
   dict set cell_dict is_in_clk [check_is_in_clk $inst $clk_nets]
-  ################
 
   #cell-pins
   set inst_ITerms [$inst getITerms]
@@ -201,10 +197,6 @@ foreach net $nets {
       print_pin_property_entry $pin_outfile $pin_dict
     }
   } else {
-    #set steiner_x {}
-    #set steiner_y {}
-    #set steiner_driver_index 0
-    #set steiner_count 0
     foreach net_ITerm $net_ITerms {
       set pin_name [get_ITerm_name $net_ITerm]
       foreach edpt $end_points {
@@ -253,15 +245,6 @@ foreach net $nets {
           set pin_tran "$pin_tran $pin_trans_"
         }
       }
-      #print max_driving cap
-      #set output_pin_seq [::sta::check_capacitance_limits [get_net $net_name] 0 $corner max]
-      #set maxcap None
-      #foreach output_pin $output_pin_seq {
-      #  if {$output_pin == [get_pin $pin_name]} {
-      #    ::sta::report_capacitance_limit_verbose [get_pin $pin_name] $corner max
-      #  }
-      #}
-    
 
       set libport [::sta::Pin_liberty_port [get_pin $pin_name]]
       if {$libport != "NULL"} {
@@ -273,7 +256,6 @@ foreach net $nets {
         set libport_cap None
       }
   
-      #set is_port [::sta::Pin_is_top_level_port [get_pin $pin_name]]
       set is_startpoint 0
       set is_endpoint 0
       foreach stpt $start_points {
@@ -301,15 +283,6 @@ foreach net $nets {
       }
       set pin_x [expr {$pin_x / $count}]
       set pin_y [expr {$pin_y / $count}]
-    
-      #set is_driver [::sta::Pin_is_driver [get_pin $pin_name]]
-      #if {$is_driver} {
-      #  set steiner_driver_index $steiner_count
-      #}
-
-      #lappend steiner_x $pin_x
-      #lappend steiner_y $pin_y
-      #set steiner_count [expr {$steiner_count + 1}]
 
       dict set pin_dict net_name $net_name
       dict set pin_dict pin_name $pin_name
@@ -329,13 +302,9 @@ foreach net $nets {
       print_pin_property_entry $pin_outfile $pin_dict   
     }
   }
-  #steiner tree
-  #::stt::report_flute_tree $steiner_x $steiner_y $steiner_driver_index
-  
+  #net properties$
   set net_name [$net getName]
   dict set net_dict net_name $net_name
-
-  #net properties$
   dict set net_dict net_cap [$net getTotalCapacitance]
   dict set net_dict net_res [$net getTotalResistance]
   dict set net_dict net_coupling [$net getTotalCouplingCap]
@@ -422,8 +391,6 @@ foreach lib $libs {
 
   foreach master $lib_masters {
     set libcell_name [$master getName]
-    #set libcell_leakage [::sta::liberty_cell_property [get_lib_cells $libcell_name] leakage_power_]
-    #set libcell_leakage [get_property [get_lib_cells $libcell_name] leakage_power_]
     dict set libcell_dict libcell_name $libcell_name
     set libcell_area [expr [$master getHeight] * [$master getWidth]]
     dict set libcell_dict libcell_area $libcell_area

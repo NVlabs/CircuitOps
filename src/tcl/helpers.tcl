@@ -135,11 +135,9 @@ proc get_pin_slew {pin_arg} {
   foreach vertex [$pin vertices] {
     if { $corner == "NULL" } {
       set pin_slew_ "[::sta::rise_short_name] [::sta::format_time [$vertex slew rise min] $digits]:[::sta::format_time [$vertex slew rise max] $digits] [::sta::fall_short_name] [::sta::format_time [$vertex slew fall min] $digits]:[::sta::format_time [$vertex slew fall max] $digits]"
-      #set pin_slew_ "[::sta::rise_short_name] [expr {[$vertex slew rise max] - [$vertex slew rise min]}] [::sta::fall_short_name] [expr {[$vertex slew fall max] - [$vertex slew fall min]}]"
       lappend pin_slew $pin_slew_
     } else {
       set pin_slew_ "[::sta::rise_short_name] [::sta::format_time [$vertex slew_corner rise $corner min] $digits]:[::sta::format_time [$vertex slew_corner rise $corner max] $digits] [::sta::fall_short_name] [::sta::format_time [$vertex slew_corner fall $corner min] $digits]:[::sta::format_time [$vertex slew_corner fall $corner max] $digits]"
-      #set pin_slew_ "[::sta::rise_short_name] [expr {[$vertex slew_corner rise $corner max] - [$vertex slew_corner rise $corner min]}] [::sta::fall_short_name] [expr {[$vertex slew_corner fall $corner max] - [$vertex slew_corner fall $corner min]}]"
       lappend pin_slew $pin_slew_    
     }
   }
@@ -155,7 +153,6 @@ proc print_ip_op_pairs {outfile input_pins output_pins is_net} {
     foreach o_p_ $output_pins {
       set input_pin [get_pin $i_p_]
       set output_pin [get_pin $o_p_]
-      #::sta::report_edges -from $input_pin -to $output_pin
       foreach from_vertex [$input_pin vertices] {
         foreach to_vertex [$output_pin vertices] {
           set iter [$from_vertex out_edge_iterator]
@@ -193,34 +190,13 @@ proc print_ip_op_pairs {outfile input_pins output_pins is_net} {
 
 proc get_arc_delay {edge vertex_from_name_proc vertex_to_name_proc} {
   global sta_report_default_digits
-  #set latch_enable [$edge latch_d_to_q_en]
-  #if { $latch_enable != "" } {
-  #  set latch_enable " enable $latch_enable"
-  #}
-  ##::sta::report_line "[$vertex_from_name_proc [$edge from]] -> [$vertex_to_name_proc [$edge to]] [$edge role]$latch_enable"
   set disables [::sta::edge_disable_reason $edge]
-  #if { $disables != "" } {
-  #  ::sta::report_line "  Disabled by $disables"
-  #}
-  
   set cond [$edge cond]
-  #if { $cond != "" } {
-  #  ::sta::report_line "  Condition: $cond"
-  #}
-
   set mode_name [$edge mode_name]
-  #if { $mode_name != "" } {
-  #  ::sta::report_line "  Mode: $mode_name [$edge mode_value]"
-  #}
   set arc_delay ""
   foreach arc [$edge timing_arcs] {
     set delays [$edge arc_delay_strings $arc $sta_report_default_digits]
     set delays_fmt [::sta::format_delays $delays]
-    #set disable_reason ""
-    #if { [::sta::timing_arc_disabled $edge $arc] } {
-    #  set disable_reason " disabled"
-    #}
-    #::sta::report_line "  [$arc from_edge] -> [$arc to_edge] $delays_fmt$disable_reason"
     set delay_ "[$arc from_edge] -> [$arc to_edge] $delays_fmt"
     if {$arc_delay == ""} {
       set arc_delay $delay_
@@ -231,9 +207,6 @@ proc get_arc_delay {edge vertex_from_name_proc vertex_to_name_proc} {
   return $arc_delay
 }
 
-#proc get_libcell_leakage {} {
-#
-#}
 
 proc load_design {def netlist libs tech_lef lefs sdc design spef} {
   foreach libFile $libs {
@@ -243,11 +216,8 @@ proc load_design {def netlist libs tech_lef lefs sdc design spef} {
   foreach lef $lefs {
     read_lef $lef
   }
-  #read_verilog $netlist
   read_def $def
   read_spef $spef
-  #read_db $db
-  #link_design $design
   read_sdc $sdc
   set_propagated_clock [all_clocks]
   # Ensure all OR created (rsz/cts) instances are connected
@@ -271,13 +241,6 @@ proc print_ip_op_cell_pairs {outfile inputs outputs} {
   }
 }
 
-#proc print_ip_op_pairs {outfile inputs outputs is_net} {
-#  foreach input $inputs {
-#    foreach output $outputs {
-#      puts $outfile "${input},${output},$is_net"
-#    }
-#  }
-#}
 
 proc report_flute_net { net } {
   set pins [lassign $net net_name drvr_index]
@@ -290,7 +253,6 @@ proc report_flute_net { net } {
     lappend ys $y
   }
   stt::report_flute_tree $xs $ys 0
-  #stt::report_flute_tree $xs $ys $drvr_index
 }
 
 proc print_pin_property_entry {outfile pin_props} {
@@ -320,8 +282,6 @@ proc print_cell_property_entry {outfile cell_props} {
   lappend cell_entry [dict get $cell_props "cell_name"];#cell_name 
   lappend cell_entry [dict get $cell_props "is_seq"];#is_seq
   lappend cell_entry [dict get $cell_props "is_macro"];#is_macro
-  #lappend cell_entry "-1";#is_in_clk
-  #done is_in_clk
   lappend cell_entry [dict get $cell_props "is_in_clk"];#is_in_clk
   lappend cell_entry [dict get $cell_props "x0"];#x0
   lappend cell_entry [dict get $cell_props "y0"];#y0
@@ -339,7 +299,6 @@ proc print_net_property_entry {outfile net_props} {
   set net_entry {}
   lappend net_entry [dict get $net_props "net_name"];#net_name
   lappend net_entry [dict get $net_props "net_route_length"];#net_route_length
-
   lappend net_entry "-1";#net_steiner_length
   lappend net_entry [dict get $net_props "fanout"];#fanout
   lappend net_entry [dict get $net_props "total_cap"];#total_cap
