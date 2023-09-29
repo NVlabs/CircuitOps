@@ -120,7 +120,6 @@ puts $net_outfile [join $header ","]
 set net_pin_outfile [open $net_pin_file w]
 puts $net_pin_outfile "src,tar"
 
-
 set startpoints [::sta::startpoints]
 set start_points {}
 foreach startpoint $startpoints {
@@ -313,7 +312,6 @@ foreach net $nets {
   set net_res [$net getTotalResistance]
   set net_coupling [$net getTotalCouplingCap]
   
-  
   set input_pins {}
   set output_pins {}
   set input_cells {}
@@ -333,8 +331,6 @@ foreach net $nets {
       lappend input_cells $cell_ITerm_name;
     }
   }
-  
-  
 
   print_ip_op_cell_pairs $cell_cell_outfile $input_cells $output_cells
   print_ip_op_pairs $pin_pin_outfile $input_pins $output_pins 1
@@ -343,7 +339,6 @@ foreach net $nets {
   dict set net_dict net_route_length [get_net_route_length $net]
 
   print_net_property_entry $net_outfile $net_dict
-
 
 }
 
