@@ -177,7 +177,7 @@ def print_ip_op_pairs(outfile, input_pins, output_pins, is_net):
   with open(outfile, "a") as file:
     for i_p_ in input_pins:
       for o_p_ in output_pins:
-        file.write("{},{},{},{}".format(i_p_, o_p_, is_net, str(-1)))
+        file.write("{},{},{},{}\n".format(i_p_, o_p_, is_net, str(-1)))
 
 def get_net_route_length(net):
   net_route_length = 0
