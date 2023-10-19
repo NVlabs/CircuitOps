@@ -56,9 +56,9 @@ for inst in insts:
   master_cell = inst.getMaster()
   master_name = master_cell.getName()
   cell_dict["libcell_name"] = master_name
-  is_seq = True if ("DEF" in master_name) else False
+  is_seq = 1 if ("DEF" in master_name) else 0
   cell_dict["is_seq"] = is_seq
-  is_macro = master_cell.isBlock()
+  is_macro = 1 if master_cell.isBlock() else 0
   cell_dict["is_macro"] = is_macro
 
   #cell-pin
