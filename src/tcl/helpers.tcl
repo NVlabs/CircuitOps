@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-proc check_is_in_clk {inst clk_nets} {
+proc check_inst_is_in_clk {inst clk_nets} {
   set is_in_clk 0
   set cell_nets [$inst getITerms]
   foreach cell_net $cell_nets {
@@ -26,6 +26,23 @@ proc check_is_in_clk {inst clk_nets} {
         }
       }
       if {$is_in_clk eq 1} {
+        break
+      }
+    }
+    if {$is_in_clk eq 1} {
+      break
+    }
+  }
+  return $is_in_clk
+}
+
+proc check_pin_is_in_clk {pin clk_nets} {
+  set is_in_clk 0
+  set pin_nets [$pin getNet]
+  foreach pin_net $pin_nets {
+    foreach clk_net $clk_nets {
+      if {$pin_net == $clk_net} {
+        set is_in_clk 1
         break
       }
     }
@@ -63,36 +80,36 @@ proc get_pin_arr {pin_arg rf} {
   foreach vertex [$pin vertices] {
     if { $vertex != "NULL" } {
       if {$rf == "rise"} {
-        set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk_delays" "NULL" "rise" "arrive"]
+        set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk" "NULL" "rise" "arrive"]
       } else {
-        set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk_delays" "NULL" "rise" "hold"]
+        set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk" "NULL" "rise" "hold"]
       }
       if {$tmp_pin_arr != ""} {
         lappend pin_arr $tmp_pin_arr
       }
 
       if {$rf == "rise"} {
-        set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk_delays" [::sta::default_arrival_clock] "rise" "arrive"]
+        set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk" [::sta::default_arrival_clock] "rise" "arrive"]
       } else {
-        set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk_delays" [::sta::default_arrival_clock] "rise" "hold"]
+        set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk" [::sta::default_arrival_clock] "rise" "hold"]
       }
       if {$tmp_pin_arr != ""} {
         lappend pin_arr $tmp_pin_arr
       }
       foreach clk [all_clocks] {
         if {$rf == "rise"} {
-          set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk_delays" $clk "rise" "arrive"]
+          set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk" $clk "rise" "arrive"]
         } else {
-          set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk_delays" $clk "rise" "hold"]
+          set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk" $clk "rise" "hold"]
         }
         if {$tmp_pin_arr != ""} {
           lappend pin_arr $tmp_pin_arr
         }
 
         if {$rf == "rise"} {
-          set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk_delays" $clk "fall" "arrive"]
+          set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk" $clk "fall" "arrive"]
         } else {
-          set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk_delays" $clk "fall" "hold"]
+          set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk" $clk "fall" "hold"]
         }
         if {$tmp_pin_arr != ""} {
           lappend pin_arr $tmp_pin_arr
@@ -100,54 +117,59 @@ proc get_pin_arr {pin_arg rf} {
       }
     }
   }
-  return $pin_arr
+  set delay 0
+  foreach delay_ $pin_arr {
+    if {$delay_ > $delay} {
+      set delay $delay_
+    }
+  }
+  return $delay
 }
 
 proc get_pin_arr_time {vertex what clk clk_rf arrive_hold} {
-  global sta_report_default_digits
-  set rise [$vertex $what rise $clk $clk_rf $sta_report_default_digits]
-  set fall [$vertex $what fall $clk $clk_rf $sta_report_default_digits]
+  set rise [$vertex $what rise $clk $clk_rf]
+  set fall [$vertex $what fall $clk $clk_rf]
   # Filter INF/-INF arrivals.
-  if { !([::sta::delays_are_inf $rise] && [::sta::delays_are_inf $fall]) } {
-    if {$clk != "NULL"} {
-      set clk_str " ([get_name $clk] [::sta::rf_short_name $clk_rf])"
-    } else {
-      set clk_str ""
-    }
+  set delay 0
+  if { !([::sta::times_are_inf $rise] && [::sta::times_are_inf $fall]) } {
     if {$arrive_hold == "arrive"} {
-      set rise_fmt [::sta::format_delays $rise]
-      return "$clk_str r $rise_fmt"
+      foreach delay_ $rise {
+        if {!([::sta::times_are_inf $delay_])} {
+          if {$delay_ > $delay} {
+            set delay $delay_
+          }
+        }
+      }
     } else {
-      set fall_fmt [::sta::format_delays $fall]
-      return "$clk_str f $fall_fmt"
+      foreach delay_ $fall {
+        if {!([::sta::times_are_inf $delay_])} {
+          if {$delay_ > $delay} {
+            set delay $delay_
+          }
+        }
+      }
     }
-  }   
+  }
+  return $delay
 }
 
 
-proc get_pin_slew {pin_arg} {
+proc get_pin_slew {pin_arg corner} {
   global sta_report_default_digits
-  set corner [::sta::parse_corner_or_all keys]
   set pin [::sta::get_port_pin_error "pin" $pin_arg]
   set digits $sta_report_default_digits
-  set pin_slew {}
+  set pin_slew 0
   foreach vertex [$pin vertices] {
-    if { $corner == "NULL" } {
-      set pin_slew_ "[::sta::rise_short_name] [::sta::format_time [$vertex slew rise min] $digits]:[::sta::format_time [$vertex slew rise max] $digits] [::sta::fall_short_name] [::sta::format_time [$vertex slew fall min] $digits]:[::sta::format_time [$vertex slew fall max] $digits]"
-      lappend pin_slew $pin_slew_
-    } else {
-      set pin_slew_ "[::sta::rise_short_name] [::sta::format_time [$vertex slew_corner rise $corner min] $digits]:[::sta::format_time [$vertex slew_corner rise $corner max] $digits] [::sta::fall_short_name] [::sta::format_time [$vertex slew_corner fall $corner min] $digits]:[::sta::format_time [$vertex slew_corner fall $corner max] $digits]"
-      lappend pin_slew $pin_slew_    
+    set pin_slew_ [$vertex slew_corner rise $corner max]
+    if {$pin_slew_ > $pin_slew} {
+      set pin_slew $pin_slew_
     }
-  }
-  if {[llength $pin_slew] == 0} {
-    lappend pin_slew "None"
   }
   return $pin_slew
 }
 
 #report_edge
-proc print_ip_op_pairs {outfile input_pins output_pins is_net} {
+proc print_ip_op_pairs {outfile input_pins output_pins is_net corner} {
   foreach i_p_ $input_pins {
     foreach o_p_ $output_pins {
       set input_pin [get_pin $i_p_]
@@ -160,10 +182,10 @@ proc print_ip_op_pairs {outfile input_pins output_pins is_net} {
             set edge [$iter next]
             if { [$edge to] == $to_vertex } {
               if { [$edge role] == "wire" } {
-                set arc_delays_ [get_arc_delay $edge ::sta::vertex_path_name ::sta::vertex_path_name]
+                set arc_delays_ [get_arc_delay $edge $corner]
                 lappend arc_delays $arc_delays_
               } else {
-                set arc_delays_ [get_arc_delay $edge ::sta::vertex_port_name ::sta::vertex_port_name]
+                set arc_delays_ [get_arc_delay $edge $corner]
                 lappend arc_delays $arc_delays_
               }
             }  
@@ -171,39 +193,29 @@ proc print_ip_op_pairs {outfile input_pins output_pins is_net} {
         }
       }
       if {[llength $arc_delays] > 0} {
-        set arc_delay ""
+        set arc_delay 0
         foreach arc_delays_ $arc_delays {
-          if {$arc_delay == ""} {
+          if {$arc_delays_ > $arc_delay} {
             set arc_delay $arc_delays_
-          } else {
-            set arc_delay "$arc_delay $arc_delays_"
           }
         }
       } else {
         set arc_delay " "
       }
-      puts $outfile "${i_p_},${o_p_},$is_net, $arc_delay"
+      puts $outfile "${i_p_},${o_p_},pin,pin,$is_net, $arc_delay"
     }
   }
 }
 
-proc get_arc_delay {edge vertex_from_name_proc vertex_to_name_proc} {
-  global sta_report_default_digits
-  set disables [::sta::edge_disable_reason $edge]
-  set cond [$edge cond]
-  set mode_name [$edge mode_name]
-  set arc_delay ""
+proc get_arc_delay {edge corner} {
+  set delays_ 0
   foreach arc [$edge timing_arcs] {
-    set delays [$edge arc_delay_strings $arc $sta_report_default_digits]
-    set delays_fmt [::sta::format_delays $delays]
-    set delay_ "[$arc from_edge] -> [$arc to_edge] $delays_fmt"
-    if {$arc_delay == ""} {
-      set arc_delay $delay_
-    } else {
-      set arc_delay "$arc_delay $delay_"
+    set delays [$edge arc_delay $arc $corner max]
+    if {$delays > $delays_} {
+      set delays_ $delays
     }
   }
-  return $arc_delay
+  return $delays_
 }
 
 
@@ -235,15 +247,25 @@ proc get_ITerm_name {ITerm} {
 proc print_ip_op_cell_pairs {outfile inputs outputs} {
   foreach input $inputs {
     foreach output $outputs {
-      puts $outfile "${input},${output}"
+      puts $outfile "${input},${output},cell,cell"
     }
   }
 }
 
+proc get_ports {net} {
+  set patterns [string map {\\ \\\\} [lindex $net 0]]
+  set ports {}
+  foreach pattern $patterns {
+    set matches [::sta::find_ports_matching $pattern 0 0]
+    if { $matches != {} } {
+      set ports [concat $ports $matches]
+    }
+  }
+  return $ports
+}
 
 proc report_flute_net { net } {
   set pins [lassign $net net_name drvr_index]
-  puts "Net $net_name"
   set xs {}
   set ys {}
   foreach pin $pins {
@@ -259,6 +281,7 @@ proc print_pin_property_entry {outfile pin_props} {
   lappend pin_entry [dict get $pin_props "pin_name"];#pin_name 
   lappend pin_entry [dict get $pin_props "x"];#x
   lappend pin_entry [dict get $pin_props "y"];#y
+  lappend pin_entry [dict get $pin_props "is_in_clk"];#is_in_clk
   lappend pin_entry "-1";#is_port
   lappend pin_entry [dict get $pin_props "is_startpoint"];#is_startpoint
   lappend pin_entry [dict get $pin_props "is_endpoint"];#is_endpoint
