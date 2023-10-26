@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from helpers import CircuitOps_File_DIR, CircuitOps_Tables
-from helpers import load_design, get_ITerm_name, print_cell_property_entry, print_pin_property_entry, print_ip_op_cell_pairs
-from helpers import print_ip_op_pairs, get_net_route_length, print_net_property_entry, print_libcell_property_entry
+from openroad_helpers import CircuitOps_File_DIR, CircuitOps_Tables
+from openroad_helpers import load_design, get_ITerm_name, print_cell_property_entry, print_pin_property_entry, print_ip_op_cell_pairs
+from openroad_helpers import print_ip_op_pairs, get_net_route_length, print_net_property_entry, print_libcell_property_entry
 import openroad as ord
 import pdn, odb, utl
 from openroad import Tech, Design
