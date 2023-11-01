@@ -174,20 +174,15 @@ proc print_ip_op_pairs {outfile input_pins output_pins is_net corner} {
     foreach o_p_ $output_pins {
       set input_pin [get_pin $i_p_]
       set output_pin [get_pin $o_p_]
+      set arc_delays {}
       foreach from_vertex [$input_pin vertices] {
         foreach to_vertex [$output_pin vertices] {
           set iter [$from_vertex out_edge_iterator]
-          set arc_delays {}
           while {[$iter has_next]} {
             set edge [$iter next]
             if { [$edge to] == $to_vertex } {
-              if { [$edge role] == "wire" } {
-                set arc_delays_ [get_arc_delay $edge $corner]
-                lappend arc_delays $arc_delays_
-              } else {
-                set arc_delays_ [get_arc_delay $edge $corner]
-                lappend arc_delays $arc_delays_
-              }
+              set arc_delays_ [get_arc_delay $edge $corner]
+              lappend arc_delays $arc_delays_
             }  
           }
         }
@@ -202,7 +197,7 @@ proc print_ip_op_pairs {outfile input_pins output_pins is_net corner} {
       } else {
         set arc_delay " "
       }
-      puts $outfile "${i_p_},${o_p_},pin,pin,$is_net, $arc_delay"
+      puts $outfile "${i_p_},${o_p_},pin,pin,$is_net,$arc_delay"
     }
   }
 }
@@ -218,6 +213,78 @@ proc get_arc_delay {edge corner} {
   return $delays_
 }
 
+proc get_fo4_delay {inst corner} {
+  set inst_ITerms [$inst getITerms]
+  set libport_cap 0
+  foreach inst_ITerm $inst_ITerms {
+    set pin_name [get_ITerm_name $inst_ITerm]
+    if {[$inst_ITerm isInputSignal]} {
+      set input_pin [get_pin $pin_name]
+      set libport [::sta::Pin_liberty_port [get_pin $pin_name]]
+      if {$libport != "NULL"} {
+        set libport_cap_ [::sta::LibertyPort_capacitance $libport $corner max]
+        if {$libport_cap_ == 0.0} {
+          set libport_cap_ 0
+        }
+        set libport_cap [expr {$libport_cap + $libport_cap_}]
+      } else {
+        set libport_cap_ 0
+      } 
+    }
+  }
+  foreach inst_ITerm $inst_ITerms {
+    set pin_name [get_ITerm_name $inst_ITerm]
+    if {[$inst_ITerm isOutputSignal]} {
+      set output_pin [get_pin $pin_name]
+      set output_pin_name $pin_name
+      set key 0
+      set load_elmore [::sta::find_pi_elmore $output_pin rise max]
+      if {[llength $load_elmore] == 0} {
+        set load_elmore [::sta::find_pi_elmore $output_pin fall max]
+        if {[llength $load_elmore] != 0} {
+          set key 1
+        }
+      } else {
+        set key 1
+      }
+      if {$key == 1} {
+        ::sta::set_pi_model $pin_name [expr {$libport_cap * 2}] [lindex $load_elmore 1] [expr {$libport_cap * 2}] 
+      }
+    }
+  }
+  set fo4_delays {}
+  if {[info exist input_pin] && [info exist output_pin]} {
+    foreach from_vertex [$input_pin vertices] {
+      foreach to_vertex [$output_pin vertices] {
+        set iter [$from_vertex out_edge_iterator]
+        while {[$iter has_next]} {
+          set edge [$iter next]
+          if { [$edge to] == $to_vertex } {
+            set arc_delays_ [get_arc_delay $edge $corner]
+            lappend fo4_delays $arc_delays_
+          }
+        }
+        $iter finish
+      }
+    }
+    if {$key == 1} {
+      ::sta::set_pi_model $output_pin_name [lindex $load_elmore 0] [lindex $load_elmore 1] [lindex $load_elmore 2]
+    }
+  }
+  set fo4_delay 0
+  if {[llength $fo4_delays] > 0} {
+    foreach fo4_delays_ $fo4_delays {
+      if {$fo4_delays_ > $fo4_delay} {
+        set fo4_delay $fo4_delays_
+      }
+    }
+  }
+  if {$fo4_delay == 0} {
+    set fo4_delay None
+  }
+  
+  return $fo4_delay
+}
 
 proc load_design {def netlist libs tech_lef lefs sdc design spef} {
   foreach libFile $libs {
@@ -337,7 +404,7 @@ proc print_libcell_property_entry {outfile libcell_props} {
   lappend libcell_entry [dict get $libcell_props "libcell_area"];#libcell_area
   lappend libcell_entry "-1";#worst_input_cap(*5)
   lappend libcell_entry "-1";#libcell_leakage
-  lappend libcell_entry "-1";#fo4_delay
+  lappend libcell_entry [dict get $libcell_props "fo4_delay"];#fo4_delay
   lappend libcell_entry "-1";#libcell_delay_fixed_load
   puts $outfile [join $libcell_entry ","]
 }
