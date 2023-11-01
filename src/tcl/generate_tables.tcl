@@ -79,7 +79,18 @@ set corner [::sta::cmd_corner]
 foreach inst $insts {
   set cell_name [$inst getName]
   dict set cell_dict cell_name $cell_name
- 
+
+  set master_cell [$inst getMaster]
+  set master_name [$master_cell getName]
+
+  if {[info exists dict_fo4_delay]} {
+    if {[dict exists $dict_fo4_delay $master_name] == 0} {
+      dict set dict_fo4_delay $master_name [get_fo4_delay $inst $corner]
+    }
+  } else {
+    dict set dict_fo4_delay $master_name [get_fo4_delay $inst $corner]
+  }
+
   # cell properties
   #location
   set BBox [$inst getBBox]
@@ -92,8 +103,6 @@ foreach inst $insts {
   dict set cell_dict x1 [$BBox xMax]
   dict set cell_dict y1 [$BBox yMax]
 
-  set master_cell [$inst getMaster]
-  set master_name [$master_cell getName]
   dict set cell_dict libcell_name $master_name 
   dict set cell_dict is_inv [get_property [get_lib_cells $master_name] is_inverter]
   dict set cell_dict is_buf [get_property [get_lib_cells $master_name] is_buffer]
@@ -119,7 +128,7 @@ foreach inst $insts {
 
       set is_in_clk [check_pin_is_in_clk $ITerm $clk_nets]
       if {[info exists dict_num_reachable_endpoint]} {
-        if {[dict exists dict_num_reachable_endpoint $pin_net_name]} {
+        if {[dict exists $dict_num_reachable_endpoint $pin_net_name]} {
           set num_reachable_endpoint [dict get $dict_num_reachable_endpoint $pin_net_name]
         } else {
           set pin_net [$ITerm getNet]
@@ -351,14 +360,18 @@ foreach lib $libs {
     dict set libcell_dict libcell_name $libcell_name
     set libcell_area [expr [$master getHeight] * [$master getWidth]]
     dict set libcell_dict libcell_area $libcell_area
-    
+
     set res [find_func_id $func_dict $libcell_name]
     set func_id [lindex $res 1]
     if {[lindex $res 0] == 0} {
       dict set func_dict $libcell_name $func_id
     }
     dict set libcell_dict func_id $func_id
-
+    if {[dict exists $dict_fo4_delay $libcell_name] == 0} {
+      dict set libcell_dict fo4_delay None
+    } else {
+      dict set libcell_dict fo4_delay [dict get $dict_fo4_delay $libcell_name]
+    }
     print_libcell_property_entry $libcell_outfile $libcell_dict
   }
 }
