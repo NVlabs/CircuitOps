@@ -96,6 +96,7 @@ proc get_pin_arr {pin_arg rf} {
       if {$tmp_pin_arr != ""} {
         lappend pin_arr $tmp_pin_arr
       }
+      
       foreach clk [all_clocks] {
         if {$rf == "rise"} {
           set tmp_pin_arr [get_pin_arr_time $vertex "arrivals_clk" $clk "rise" "arrive"]
@@ -117,7 +118,7 @@ proc get_pin_arr {pin_arg rf} {
       }
     }
   }
-  set delay 0
+  set delay -1
   foreach delay_ $pin_arr {
     if {$delay_ > $delay} {
       set delay $delay_
@@ -130,7 +131,7 @@ proc get_pin_arr_time {vertex what clk clk_rf arrive_hold} {
   set rise [$vertex $what rise $clk $clk_rf]
   set fall [$vertex $what fall $clk $clk_rf]
   # Filter INF/-INF arrivals.
-  set delay 0
+  set delay -1
   if { !([::sta::times_are_inf $rise] && [::sta::times_are_inf $fall]) } {
     if {$arrive_hold == "arrive"} {
       foreach delay_ $rise {
@@ -158,7 +159,7 @@ proc get_pin_slew {pin_arg corner} {
   global sta_report_default_digits
   set pin [::sta::get_port_pin_error "pin" $pin_arg]
   set digits $sta_report_default_digits
-  set pin_slew 0
+  set pin_slew -1
   foreach vertex [$pin vertices] {
     set pin_slew_ [$vertex slew_corner rise $corner max]
     if {$pin_slew_ > $pin_slew} {
@@ -188,7 +189,7 @@ proc print_ip_op_pairs {outfile input_pins output_pins is_net corner} {
         }
       }
       if {[llength $arc_delays] > 0} {
-        set arc_delay 0
+        set arc_delay -1
         foreach arc_delays_ $arc_delays {
           if {$arc_delays_ > $arc_delay} {
             set arc_delay $arc_delays_
@@ -203,7 +204,7 @@ proc print_ip_op_pairs {outfile input_pins output_pins is_net corner} {
 }
 
 proc get_arc_delay {edge corner} {
-  set delays_ 0
+  set delays_ -1
   foreach arc [$edge timing_arcs] {
     set delays [$edge arc_delay $arc $corner max]
     if {$delays > $delays_} {
@@ -211,6 +212,67 @@ proc get_arc_delay {edge corner} {
     }
   }
   return $delays_
+}
+
+proc get_fix_load_delay {inst corner fix_load_cap} {
+  set inst_ITerms [$inst getITerms]
+  set libport_cap 0
+  foreach inst_ITerm $inst_ITerms {
+    set pin_name [get_ITerm_name $inst_ITerm]
+    if {[$inst_ITerm isInputSignal]} {
+      set input_pin [get_pin $pin_name]
+    }
+    if {[$inst_ITerm isOutputSignal]} {
+      set output_pin [get_pin $pin_name]
+      set output_pin_name $pin_name
+      set key 0
+      set load_elmore [::sta::find_pi_elmore $output_pin rise max]
+      if {[llength $load_elmore] == 0} {
+        set load_elmore [::sta::find_pi_elmore $output_pin fall max]
+        if {[llength $load_elmore] != 0} {
+          set key 1
+        }
+      } else {
+        set key 1
+      }
+      if {$key == 1} {
+        ::sta::set_pi_model $output_pin_name [expr {$fix_load_cap / 2}] [lindex $load_elmore 1] [expr {$fix_load_cap / 2}]
+      }
+    }
+  }
+  set fix_load_delays {}
+  if {[info exist input_pin] && [info exist output_pin]} {
+    foreach from_vertex [$input_pin vertices] {
+      foreach to_vertex [$output_pin vertices] {
+        set iter [$from_vertex out_edge_iterator]
+        while {[$iter has_next]} {
+          set edge [$iter next]
+          if { [$edge to] == $to_vertex } {
+            set arc_delays_ [get_arc_delay $edge $corner]
+            lappend fix_load_delays $arc_delays_
+          }
+        }
+        $iter finish
+      }
+    }
+    if {$key == 1} {
+      ::sta::set_pi_model $output_pin_name [lindex $load_elmore 0] [lindex $load_elmore 1] [lindex $load_elmore 2]
+    }
+    unset input_pin
+    unset output_pin
+  }
+  set fix_load_delay -1
+  if {[llength $fix_load_delays] > 0} {
+    foreach fix_load_delays_ $fix_load_delays {
+      if {$fix_load_delays_ > $fix_load_delay} {
+        set fix_load_delay $fix_load_delays_
+      }
+    }
+  }
+  if {$fix_load_delay == -1} {
+    set fix_load_delay None
+  }
+  return $fix_load_delay      
 }
 
 proc get_fo4_delay {inst corner} {
@@ -248,7 +310,7 @@ proc get_fo4_delay {inst corner} {
         set key 1
       }
       if {$key == 1} {
-        ::sta::set_pi_model $pin_name [expr {$libport_cap * 2}] [lindex $load_elmore 1] [expr {$libport_cap * 2}] 
+        ::sta::set_pi_model $output_pin_name [expr {$libport_cap * 2}] [lindex $load_elmore 1] [expr {$libport_cap * 2}] 
       }
     }
   }
@@ -270,8 +332,10 @@ proc get_fo4_delay {inst corner} {
     if {$key == 1} {
       ::sta::set_pi_model $output_pin_name [lindex $load_elmore 0] [lindex $load_elmore 1] [lindex $load_elmore 2]
     }
+    unset input_pin
+    unset output_pin
   }
-  set fo4_delay 0
+  set fo4_delay -1
   if {[llength $fo4_delays] > 0} {
     foreach fo4_delays_ $fo4_delays {
       if {$fo4_delays_ > $fo4_delay} {
@@ -279,7 +343,7 @@ proc get_fo4_delay {inst corner} {
       }
     }
   }
-  if {$fo4_delay == 0} {
+  if {$fo4_delay == -1} {
     set fo4_delay None
   }
   
@@ -405,7 +469,7 @@ proc print_libcell_property_entry {outfile libcell_props} {
   lappend libcell_entry "-1";#worst_input_cap(*5)
   lappend libcell_entry "-1";#libcell_leakage
   lappend libcell_entry [dict get $libcell_props "fo4_delay"];#fo4_delay
-  lappend libcell_entry "-1";#libcell_delay_fixed_load
+  lappend libcell_entry [dict get $libcell_props "fix_load_delay"];#libcell_delay_fixed_load
   puts $outfile [join $libcell_entry ","]
 }
 
