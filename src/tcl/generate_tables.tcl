@@ -75,6 +75,8 @@ foreach endpoint $endpoints {
 }
 
 set corner [::sta::cmd_corner]
+set fix_load_key 0
+set fix_load_inv_name INV_X1
 
 foreach inst $insts {
   set cell_name [$inst getName]
@@ -82,6 +84,24 @@ foreach inst $insts {
 
   set master_cell [$inst getMaster]
   set master_name [$master_cell getName]
+  
+  if {$fix_load_key == 0} {
+    if {[string equal $master_name $fix_load_inv_name]} {
+      set inst_ITerms [$inst getITerms]
+      foreach ITerm $inst_ITerms {
+        set pin_name [get_ITerm_name $ITerm]
+        set libport [::sta::Pin_liberty_port [get_pin $pin_name]]
+        if {$libport != "NULL"} {
+          set libport_cap [::sta::LibertyPort_capacitance $libport $corner max]
+          if {$libport != 0.0} {
+            set fix_load_cap $libport_cap
+            set fix_load_key 1
+            break
+          }
+        }
+      }
+    }
+  }
 
   if {[info exists dict_fo4_delay]} {
     if {[dict exists $dict_fo4_delay $master_name] == 0} {
@@ -163,15 +183,15 @@ foreach inst $insts {
       set pin_rise_arr [get_pin_arr [get_pin $pin_name] "rise"]
       set pin_fall_arr [get_pin_arr [get_pin $pin_name] "fall"]
       
-      set pin_trans [get_pin_slew [get_pin $pin_name] $corner]
-      set pin_tran ""
-      foreach pin_trans_ $pin_trans {
-        if {$pin_tran == ""} {
-          set pin_tran $pin_trans_
-        } else {
-          set pin_tran "$pin_tran $pin_trans_"
-        }
-      }
+      set pin_tran [get_pin_slew [get_pin $pin_name] $corner]
+      #set pin_tran ""
+      #foreach pin_trans_ $pin_trans {
+      #  if {$pin_tran == ""} {
+      #    set pin_tran $pin_trans_
+      #  } else {
+      #    set pin_tran "$pin_tran $pin_trans_"
+      #  }
+      #}
       
       set libport [::sta::Pin_liberty_port [get_pin $pin_name]]
       if {$libport != "NULL"} {
@@ -211,7 +231,9 @@ foreach inst $insts {
       }
       set pin_x [expr {$pin_x / $count}]
       set pin_y [expr {$pin_y / $count}]
-
+      
+      set maxcap [::sta::max_capacitance_check_limit]
+  
       dict set pin_dict net_name $pin_net_name
       dict set pin_dict pin_name $pin_name
       dict set pin_dict cell_name $cell_name
@@ -248,7 +270,6 @@ foreach inst $insts {
     print_ip_op_pairs $pin_pin_outfile $input_pins $output_pins 0 $corner
   }
   #power
-  set corner [::sta::cmd_corner]
   set sta_cell [get_cell $cell_name]
   set inst_power [::sta::instance_power $sta_cell $corner]
   lassign $inst_power inst_pwr_intern inst_pwr_switch inst_pwr_leak inst_pwr_total
@@ -274,7 +295,6 @@ puts $net_pin_outfile "src,tar,src_type,tar_type"
 foreach net $nets {
   set net_name [$net getName]
   set num_reachable_endpoint 0 
-  set corner [::sta::cmd_corner]
   set total_cap [::sta::Net_capacitance [get_net $net_name] $corner max]
   set net_ITerms [$net getITerms]
 
@@ -336,6 +356,19 @@ proc find_func_id {lib_dict libcell_name} {
   return [list 0 $func_id]
 }
 
+if {[info exists fix_load_cap]} {
+  foreach inst $insts {
+    set master_cell [$inst getMaster]
+    set master_name [$master_cell getName]
+    if {[info exists dict_fix_load_delay]} {
+      if {[dict exists $dict_fix_load_delay $master_name] == 0} {
+        dict set dict_fix_load_delay $master_name [get_fix_load_delay $inst $corner $fix_load_cap]
+      }
+    } else {
+      dict set dict_fix_load_delay $master_name [get_fix_load_delay $inst $corner $fix_load_cap]
+    }
+  }
+}
 
 #libcell table
 set libcell_outfile [open $libcell_file w]
@@ -357,6 +390,8 @@ foreach lib $libs {
 
   foreach master $lib_masters {
     set libcell_name [$master getName]
+    set libcell [get_lib_cells $libcell_name]
+
     dict set libcell_dict libcell_name $libcell_name
     set libcell_area [expr [$master getHeight] * [$master getWidth]]
     dict set libcell_dict libcell_area $libcell_area
@@ -372,6 +407,17 @@ foreach lib $libs {
     } else {
       dict set libcell_dict fo4_delay [dict get $dict_fo4_delay $libcell_name]
     }
+    
+    if {[info exists dict_fix_load_delay]} {
+      if {[dict exists $dict_fix_load_delay $libcell_name] == 0} {
+        dict set libcell_dict fix_load_delay None
+      } else {
+        dict set libcell_dict fix_load_delay [dict get $dict_fix_load_delay $libcell_name]
+      }
+    } else {
+      dict set libcell_dict fix_load_delay None
+    }
+    
     print_libcell_property_entry $libcell_outfile $libcell_dict
   }
 }
