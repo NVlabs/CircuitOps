@@ -214,32 +214,41 @@ proc get_arc_delay {edge corner} {
   return $delays_
 }
 
-proc get_fix_load_delay {inst corner fix_load_cap} {
+proc get_fix_load_delay {inst corner fix_load_insts tmp_net} {
   set inst_ITerms [$inst getITerms]
-  set libport_cap 0
   foreach inst_ITerm $inst_ITerms {
     set pin_name [get_ITerm_name $inst_ITerm]
     if {[$inst_ITerm isInputSignal]} {
+      if {[info exists input_pin]} {
+        unset input_pin
+      }
       set input_pin [get_pin $pin_name]
     }
     if {[$inst_ITerm isOutputSignal]} {
-      set output_pin [get_pin $pin_name]
-      set output_pin_name $pin_name
-      set key 0
-      set load_elmore [::sta::find_pi_elmore $output_pin rise max]
-      if {[llength $load_elmore] == 0} {
-        set load_elmore [::sta::find_pi_elmore $output_pin fall max]
-        if {[llength $load_elmore] != 0} {
-          set key 1
-        }
-      } else {
-        set key 1
+      if {[info exists output_pin]} {
+         unset output_pin
       }
-      if {$key == 1} {
-        ::sta::set_pi_model $output_pin_name [expr {$fix_load_cap / 2}] [lindex $load_elmore 1] [expr {$fix_load_cap / 2}]
+      set output_pin [get_pin $pin_name]
+    }
+  }
+
+  set fix_load_inst_pins {}
+  foreach fix_load_sta_inst $fix_load_insts {
+    set fix_load_inst [::sta::sta_to_db_inst $fix_load_sta_inst]
+    set fix_load_inst_ITerms [$fix_load_inst getITerms]
+    foreach fix_load_inst_ITerm $fix_load_inst_ITerms {
+      if {[$fix_load_inst_ITerm isInputSignal]} {
+        set fix_load_inst_pin_name [get_ITerm_name $fix_load_inst_ITerm]
+        set fix_load_inst_pin [get_pin $fix_load_inst_pin_name]
+        lappend fix_load_inst_pins $fix_load_inst_pin
       }
     }
   }
+  
+  foreach fix_load_inst_pin $fix_load_inst_pins {
+    ::sta::connect_pin $tmp_net $fix_load_inst_pin
+  }
+
   set fix_load_delays {}
   if {[info exist input_pin] && [info exist output_pin]} {
     foreach from_vertex [$input_pin vertices] {
@@ -254,9 +263,6 @@ proc get_fix_load_delay {inst corner fix_load_cap} {
         }
         $iter finish
       }
-    }
-    if {$key == 1} {
-      ::sta::set_pi_model $output_pin_name [lindex $load_elmore 0] [lindex $load_elmore 1] [lindex $load_elmore 2]
     }
     unset input_pin
     unset output_pin
@@ -275,45 +281,51 @@ proc get_fix_load_delay {inst corner fix_load_cap} {
   return $fix_load_delay      
 }
 
-proc get_fo4_delay {inst corner} {
+
+proc get_fo4_delay {inst corner tmp_net lib_cell} {
   set inst_ITerms [$inst getITerms]
-  set libport_cap 0
   foreach inst_ITerm $inst_ITerms {
     set pin_name [get_ITerm_name $inst_ITerm]
     if {[$inst_ITerm isInputSignal]} {
+      if {[info exists input_pin]} {
+        unset input_pin
+      }
       set input_pin [get_pin $pin_name]
-      set libport [::sta::Pin_liberty_port [get_pin $pin_name]]
-      if {$libport != "NULL"} {
-        set libport_cap_ [::sta::LibertyPort_capacitance $libport $corner max]
-        if {$libport_cap_ == 0.0} {
-          set libport_cap_ 0
-        }
-        set libport_cap [expr {$libport_cap + $libport_cap_}]
-      } else {
-        set libport_cap_ 0
-      } 
     }
   }
   foreach inst_ITerm $inst_ITerms {
     set pin_name [get_ITerm_name $inst_ITerm]
     if {[$inst_ITerm isOutputSignal]} {
-      set output_pin [get_pin $pin_name]
-      set output_pin_name $pin_name
-      set key 0
-      set load_elmore [::sta::find_pi_elmore $output_pin rise max]
-      if {[llength $load_elmore] == 0} {
-        set load_elmore [::sta::find_pi_elmore $output_pin fall max]
-        if {[llength $load_elmore] != 0} {
-          set key 1
-        }
-      } else {
-        set key 1
+      if {[info exists output_pin]} {
+        unset output_pin
       }
-      if {$key == 1} {
-        ::sta::set_pi_model $output_pin_name [expr {$libport_cap * 2}] [lindex $load_elmore 1] [expr {$libport_cap * 2}] 
+      set output_pin [get_pin $pin_name]
+    }
+  }
+  
+  set fo4_load_insts {}
+  for {set i 0} {$i < 4} {incr i} {
+    set fo4_load_ref_inv_inst [::sta::make_instance tmp_inst$i$i $lib_cell]
+    set fo4_load_ref_inv_db_inst [::sta::sta_to_db_inst $fo4_load_ref_inv_inst]
+    lappend fo4_load_insts $fo4_load_ref_inv_inst
+  }
+
+  set fo4_load_inst_pins {}  
+  foreach fo4_load_sta_inst $fo4_load_insts {
+    set fo4_load_inst [::sta::sta_to_db_inst $fo4_load_sta_inst]
+    set fo4_load_inst_ITerms [$fo4_load_inst getITerms]
+    foreach fo4_load_inst_ITerm $fo4_load_inst_ITerms {
+      if {[$fo4_load_inst_ITerm isInputSignal]} {
+        set fo4_load_inst_pin_name [get_ITerm_name $fo4_load_inst_ITerm]
+        set fo4_load_inst_pin [get_pin $fo4_load_inst_pin_name]
+        lappend fo4_load_inst_pins $fo4_load_inst_pin
       }
     }
   }
+  foreach fo4_load_inst_pin $fo4_load_inst_pins {
+    ::sta::connect_pin $tmp_net $fo4_load_inst_pin
+  }
+
   set fo4_delays {}
   if {[info exist input_pin] && [info exist output_pin]} {
     foreach from_vertex [$input_pin vertices] {
@@ -328,9 +340,6 @@ proc get_fo4_delay {inst corner} {
         }
         $iter finish
       }
-    }
-    if {$key == 1} {
-      ::sta::set_pi_model $output_pin_name [lindex $load_elmore 0] [lindex $load_elmore 1] [lindex $load_elmore 2]
     }
     unset input_pin
     unset output_pin
@@ -347,6 +356,13 @@ proc get_fo4_delay {inst corner} {
     set fo4_delay None
   }
   
+  foreach fo4_load_inst_pin $fo4_load_inst_pins {
+    ::sta::disconnect_pin $tmp_net $fo4_load_inst_pin
+  }
+  foreach fo4_load_inst $fo4_load_insts {
+    ::sta::delete_instance $fo4_load_inst
+  }
+  unset fo4_load_insts
   return $fo4_delay
 }
 
@@ -466,8 +482,8 @@ proc print_libcell_property_entry {outfile libcell_props} {
   lappend libcell_entry [dict get $libcell_props "libcell_name"];#libcell_name
   lappend libcell_entry [dict get $libcell_props "func_id"];##func. id (*8)
   lappend libcell_entry [dict get $libcell_props "libcell_area"];#libcell_area
-  lappend libcell_entry "-1";#worst_input_cap(*5)
-  lappend libcell_entry "-1";#libcell_leakage
+  lappend libcell_entry [dict get $libcell_props "worst_input_cap"];#worst_input_cap(*5)
+  lappend libcell_entry [dict get $libcell_props "libcell_leakage"];#libcell_leakage
   lappend libcell_entry [dict get $libcell_props "fo4_delay"];#fo4_delay
   lappend libcell_entry [dict get $libcell_props "fix_load_delay"];#libcell_delay_fixed_load
   puts $outfile [join $libcell_entry ","]
