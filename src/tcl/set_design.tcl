@@ -14,10 +14,10 @@
 # limitations under the License.
 
 ### SET DESIGN ###
-set DESIGN_NAME gcd
+#set DESIGN_NAME gcd
 #set DESIGN_NAME aes
 #set DESIGN_NAME bp_fe
-#set DESIGN_NAME bp_be
+set DESIGN_NAME bp_be
 
 ### SET PLATFORM ###
 set PLATFORM nangate45
@@ -49,5 +49,5 @@ set cell_pin_file "${OUTPUT_DIR}/cell_pin_edge.csv"
 set net_pin_file "${OUTPUT_DIR}/net_pin_edge.csv"
 set pin_pin_file "${OUTPUT_DIR}/pin_pin_edge.csv"
 set cell_net_file "${OUTPUT_DIR}/cell_net_edge.csv"
-
+set cell_cell_file "${OUTPUT_DIR}/cell_cell_edge.csv"
 
