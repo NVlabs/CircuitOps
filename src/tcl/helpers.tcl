@@ -489,3 +489,4 @@ proc print_libcell_property_entry {outfile libcell_props} {
   puts $outfile [join $libcell_entry ","]
 }
 
+
