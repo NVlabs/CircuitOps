@@ -163,7 +163,7 @@ class CircuitOps_Tables:
                 "net_route_length": [net_props["net_route_length"]],
                 "net_steiner_length": [-1],
                 "fanout": [net_props["fanout"]],
-                "total_cap": [-1],
+                "total_cap": [net_props["total_cap"]],
                 "net_cap": [-1],
                 "net_coupling": [-1],
                 "net_res": [-1]
