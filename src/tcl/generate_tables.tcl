@@ -18,7 +18,6 @@ source "./src/tcl/helpers.tcl"
 
 
 load_design $DEF_FILE $NETLIST_FILE $LIB_FILES $TECH_LEF_FILE $LEF_FILES $SDC_FILE $DESIGN_NAME $SPEF_FILE 
-
 source "${PLATFORM_DIR}/setRC.tcl"
 
 set db [ord::get_db]
@@ -116,8 +115,8 @@ foreach inst $insts {
     set pin [get_pin $pin_name]
     set pin_net_name [[$ITerm getNet] getName]
     set num_reachable_endpoint 0
-    if {!([::sta::Net_is_power [get_net $pin_net_name]] || [::sta::Net_is_ground [get_net $pin_net_name]])} {
 
+    if {!([::sta::Net_is_power [get_net $pin_net_name]] || [::sta::Net_is_ground [get_net $pin_net_name]])} {
       set is_in_clk [check_pin_is_in_clk $ITerm $clk_nets]
       if {[info exists dict_num_reachable_endpoint]} {
         if {[dict exists $dict_num_reachable_endpoint $pin_net_name]} {
@@ -133,7 +132,7 @@ foreach inst $insts {
               }
             }
           }
-          dict set dict_num_reachable_endpoint $pin_net_name $num_reachable_endpoint
+          dict set dict_num_reachable_endpoint $pin_net_name 0
           set num_reachable_endpoint $num_reachable_endpoint
         }
       } else {
@@ -147,7 +146,7 @@ foreach inst $insts {
             }
           }
         }
-        dict set dict_num_reachable_endpoint $pin_net_name $num_reachable_endpoint
+        dict set dict_num_reachable_endpoint $pin_net_name 0
         set num_reachable_endpoint $num_reachable_endpoint
       }
       set maxtran [::sta::max_slew_check_limit]
@@ -195,8 +194,6 @@ foreach inst $insts {
       }
       set pin_x [expr {$pin_x / $count}]
       set pin_y [expr {$pin_y / $count}]
-      
-      set maxcap [::sta::max_capacitance_check_limit]
   
       dict set pin_dict net_name $pin_net_name
       dict set pin_dict pin_name $pin_name
@@ -350,6 +347,18 @@ foreach lib $libs {
 
   foreach master $lib_masters {
     set libcell_name [$master getName]
+
+    #filter duplicate
+    if {[info exists libcell_name_map]} {
+      if {[dict exists $libcell_name_map $libcell_name]} {
+        continue  
+      } else {
+        dict set libcell_name_map $libcell_name 0
+      }
+    } else {
+      dict set libcell_name_map $libcell_name 0
+    }   
+
     set libcell [get_lib_cells $libcell_name]
     
     set input_caps {}
@@ -421,6 +430,7 @@ foreach lib $libs {
     print_libcell_property_entry $libcell_outfile $libcell_dict
   }
 }
+
 close $libcell_outfile
 
 foreach fix_load_inst $fix_load_insts {
