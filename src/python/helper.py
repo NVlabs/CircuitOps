@@ -94,13 +94,20 @@ def read_tables_OpenROAD(data_root, design=None):
 
     # all_fo4_delay_path = data_root + "all_fo4_delay_new.txt"
 
-    cell_edge_path = data_root  + "cell_pin_edge.csv"
+    #############
+    ##add by BY##
+    #############
+    cell_cell_path = data_root + "cell_cell_edge.csv"
+    #############
+
+
+    cell_pin_path = data_root  + "cell_pin_edge.csv"
     cell_path = data_root  + "cell_properties.csv"
-    net_edge_path = data_root  +  "net_pin_edge.csv"
+    net_pin_path = data_root  +  "net_pin_edge.csv"
     net_path = data_root  + "net_properties.csv"
-    pin_edge_path = data_root  + "pin_pin_edge.csv"
+    pin_pin_path = data_root  + "pin_pin_edge.csv"
     pin_path = data_root  + "pin_properties.csv"
-    net_cell_edge_path = data_root  + "cell_net_edge.csv"
+    net_cell_path = data_root  + "cell_net_edge.csv"
 
     all_fo4_delay_path = data_root + "libcell_properties.csv"
 
@@ -112,21 +119,33 @@ def read_tables_OpenROAD(data_root, design=None):
     cell_df = pd.read_csv(cell_path)
     net_df = pd.read_csv(net_path)
 
-    pin_edge_df = pd.read_csv(pin_edge_path)
-    cell_edge_df = pd.read_csv(cell_edge_path)
-    net_edge_df = pd.read_csv(net_edge_path)
-    net_cell_edge_df = pd.read_csv(net_cell_edge_path)
+    #############
+    ##add by BY##
+    #############
+    cell_cell_df = pd.read_csv(cell_cell_path)
+    #############
+
+    pin_pin_df = pd.read_csv(pin_pin_path)
+    cell_pin_df = pd.read_csv(cell_pin_path)
+    net_pin_df = pd.read_csv(net_pin_path)
+    net_cell_df = pd.read_csv(net_cell_path)
 
     print("fo4_df shape: ", fo4_df.shape)
     print("pin_df.shape: ", pin_df.shape)
     print("cell_df.shape: ", cell_df.shape)
     print("net_df.shape: ", net_df.shape)
-    print("pin_edge_df.shape: ", pin_edge_df.shape)
-    print("cell_edge_df.shape: ", cell_edge_df.shape)
-    print("net_edge_df.shape: ", net_edge_df.shape)
-    print("net_cell_edge_df.shape: ", net_cell_edge_df.shape)
+    print("pin_edge_df.shape: ", pin_pin_df.shape)
+    print("cell_edge_df.shape: ", cell_pin_df.shape)
+    print("net_edge_df.shape: ", net_pin_df.shape)
+    print("net_cell_edge_df.shape: ", net_cell_df.shape)
 
-    return pin_df, cell_df, net_df, pin_edge_df, cell_edge_df, net_edge_df, net_cell_edge_df, fo4_df
+    #############
+    ##add by BY##
+    #############
+    print("cell_cell_edge_df.shape: ", cell_cell_df.shape)
+    #############
+
+    return pin_df, cell_df, net_df, pin_pin_df, cell_pin_df, net_pin_df, net_cell_df, cell_cell_df, fo4_df
 
 ### remove pins and cell with arrival time > 1000 or infinite slack
 def rm_invalid_pins_cells(pin_df, cell_df):
@@ -313,66 +332,79 @@ def generate_edge_df(pin_df, cell_df, net_df, pin_edge_df, cell_edge_df, net_edg
     return pin_edge_df, cell_edge_df, net_edge_df, net_cell_edge_df, cell2cell_edge_df, edge_df
 
 ### 1) get edge src and tar ids and 2) generate edge_df by merging all edges
-def generate_edge_df_OpenROAD(pin_df, cell_df, net_df, pin_edge_df, cell_edge_df, net_edge_df, net_cell_edge_df):
+def generate_edge_df_OpenROAD(pin_df, cell_df, net_df, pin_pin_df, cell_pin_df, net_pin_df, net_cell_df, cell_cell_df):
     edge_id = pd.concat([pin_df.loc[:,["id", "name"]], cell_df.loc[:,["id", "name"]], net_df.loc[:,["id", "name"]]], ignore_index=True)
     src = edge_id.copy()
     src = src.rename(columns={"id":"src_id", "name":"src"})
     tar = edge_id.copy()
     tar = tar.rename(columns={"id":"tar_id", "name":"tar"})
 
-    pin_edge_df = pin_edge_df.merge(src, on="src", how="left")
-    pin_edge_df = pin_edge_df.merge(tar, on="tar", how="left")
+    pin_pin_df = pin_pin_df.merge(src, on="src", how="left")
+    pin_pin_df = pin_pin_df.merge(tar, on="tar", how="left")
 
-    cell_edge_df = cell_edge_df.merge(src, on="src", how="left")
-    cell_edge_df = cell_edge_df.merge(tar, on="tar", how="left")
+    cell_pin_df = cell_pin_df.merge(src, on="src", how="left")
+    cell_pin_df = cell_pin_df.merge(tar, on="tar", how="left")
 
-    net_edge_df = net_edge_df.merge(src, on="src", how="left")
-    net_edge_df = net_edge_df.merge(tar, on="tar", how="left")
+    net_pin_df = net_pin_df.merge(src, on="src", how="left")
+    net_pin_df = net_pin_df.merge(tar, on="tar", how="left")
 
-    net_cell_edge_df = net_cell_edge_df.merge(src, on="src", how="left")
-    net_cell_edge_df = net_cell_edge_df.merge(tar, on="tar", how="left")
+    net_cell_df = net_cell_df.merge(src, on="src", how="left")
+    net_cell_df = net_cell_df.merge(tar, on="tar", how="left")
+
+    cell_cell_df = cell_cell_df.merge(src, on="src", how="left")
+    cell_cell_df = cell_cell_df.merge(tar, on="tar", how="left")
 
     # drop illegal edges
-    print("pin_edge shape: ")
-    print(pin_edge_df.shape)
-    idx = pin_edge_df[pd.isna(pin_edge_df.src_id)].index
-    pin_edge_df = pin_edge_df.drop(idx)
-    print(pin_edge_df.shape)
-    idx = pin_edge_df[pd.isna(pin_edge_df.tar_id)].index
-    pin_edge_df = pin_edge_df.drop(idx)
-    print(pin_edge_df.shape)
+    print("pin_pin shape: ")
+    print(pin_pin_df.shape)
+    idx = pin_pin_df[pd.isna(pin_pin_df.src_id)].index
+    pin_pin_df = pin_pin_df.drop(idx)
+    print(pin_pin_df.shape)
+    idx = pin_pin_df[pd.isna(pin_pin_df.tar_id)].index
+    pin_pin_df = pin_pin_df.drop(idx)
+    print(pin_pin_df.shape)
 
-    print("cell_edge shape: ")
-    print(cell_edge_df.shape)
-    idx = cell_edge_df[pd.isna(cell_edge_df.src_id)].index
-    cell_edge_df = cell_edge_df.drop(idx)
-    print(cell_edge_df.shape)
-    idx = cell_edge_df[pd.isna(cell_edge_df.tar_id)].index
-    cell_edge_df = cell_edge_df.drop(idx)
-    print(cell_edge_df.shape)
+    print("cell_pin shape: ")
+    print(cell_pin_df.shape)
+    idx = cell_pin_df[pd.isna(cell_pin_df.src_id)].index
+    cell_pin_df = cell_pin_df.drop(idx)
+    print(cell_pin_df.shape)
+    idx = cell_pin_df[pd.isna(cell_pin_df.tar_id)].index
+    cell_pin_df = cell_pin_df.drop(idx)
+    print(cell_pin_df.shape)
 
-    print("net_edge shape: ")
-    print(net_edge_df.shape)
-    idx = net_edge_df[pd.isna(net_edge_df.src_id)].index
-    net_edge_df = net_edge_df.drop(idx)
-    print(net_edge_df.shape)
-    idx = net_edge_df[pd.isna(net_edge_df.tar_id)].index
-    net_edge_df = net_edge_df.drop(idx)
-    print(net_edge_df.shape)
+    print("net_pin shape: ")
+    print(net_pin_df.shape)
+    idx = net_pin_df[pd.isna(net_pin_df.src_id)].index
+    net_pin_df = net_pin_df.drop(idx)
+    print(net_pin_df.shape)
+    idx = net_pin_df[pd.isna(net_pin_df.tar_id)].index
+    net_pin_df = net_pin_df.drop(idx)
+    print(net_pin_df.shape)
 
-    print("net_cell_edge shape: ")
-    print(net_cell_edge_df.shape)
-    idx = net_cell_edge_df[pd.isna(net_cell_edge_df.src_id)].index
-    net_cell_edge_df = net_cell_edge_df.drop(idx)
-    print(net_cell_edge_df.shape)
-    idx = net_cell_edge_df[pd.isna(net_cell_edge_df.tar_id)].index
-    net_cell_edge_df = net_cell_edge_df.drop(idx)
-    print(net_cell_edge_df.shape)
+    print("net_cell shape: ")
+    print(net_cell_df.shape)
+    idx = net_cell_df[pd.isna(net_cell_df.src_id)].index
+    net_cell_df = net_cell_df.drop(idx)
+    print(net_cell_df.shape)
+    idx = net_cell_df[pd.isna(net_cell_df.tar_id)].index
+    net_cell_df = net_cell_df.drop(idx)
+    print(net_cell_df.shape)
 
-    edge_df = pd.concat([pin_edge_df.loc[:,["src_id", "tar_id"]], cell_edge_df.loc[:,["src_id", "tar_id"]], \
-                     net_edge_df.loc[:,["src_id", "tar_id"]], net_cell_edge_df.loc[:,["src_id", "tar_id"]]], ignore_index=True)
+    print("cell_cell shape: ")
+    print(cell_cell_df.shape)
+    idx = cell_cell_df[pd.isna(cell_cell_df.src_id)].index    
+    cell_cell_df = cell_cell_df.drop(idx)
+    print(cell_cell_df.shape)
+    idx = cell_cell_df[pd.isna(cell_cell_df.tar_id)].index
+    cell_cell_df = cell_cell_df.drop(idx)
+    print(cell_cell_df.shape)
 
-    return pin_edge_df, cell_edge_df, net_edge_df, net_cell_edge_df, edge_df
+    edge_df = pd.concat([pin_pin_df.loc[:,["src_id", "tar_id"]], cell_pin_df.loc[:,["src_id", "tar_id"]], \
+                      net_pin_df.loc[:,["src_id", "tar_id"]], net_cell_df.loc[:,["src_id", "tar_id"]], \
+                      cell_cell_df.loc[:,["src_id", "tar_id"]]], ignore_index=True)
+
+    return pin_pin_df, cell_pin_df, net_pin_df, net_cell_df, cell_cell_df, edge_df
 
 ### get the largest component's id
 def get_largest_idx(hist):
