@@ -36,6 +36,8 @@ tech = ord.get_db_tech()
 insts = block.getInsts()
 nets = block.getNets()
 
+corner = design.getCorners()[0]
+
 if args.w:
   header = "cell_name,is_seq,is_macro,is_in_clk,x0,y0,x1,y1,is_buf,is_inv,libcell_name,cell_static_power,cell_dynamic_power"
   with open(_CircuitOps_File_DIR.cell_file, "w") as file:
@@ -78,7 +80,7 @@ for inst in insts:
   master_cell = inst.getMaster()
   master_name = master_cell.getName()
   cell_dict["libcell_name"] = master_name
-  is_seq = 1 if ("DEF" in master_name) else 0
+  is_seq = 1 if ("DFF" in master_name) else 0
   cell_dict["is_seq"] = is_seq
   is_macro = 1 if master_cell.isBlock() else 0
   cell_dict["is_macro"] = is_macro
@@ -92,7 +94,6 @@ for inst in insts:
     pin_name = get_ITerm_name(ITerm)
     pin_net_name = ITerm.getNet().getName()
     #pin_property
-    pin_name = get_ITerm_name(ITerm)
     pin_x, pin_y = 0, 0
     count = 0
     pin_geometries = ITerm.getGeometries()
@@ -168,6 +169,8 @@ for net in nets:
   net_res = net.getTotalResistance()
   net_coupling = net.getTotalCouplingCap()
   
+  total_cap = design.getNetCap(net, corner, Design.Max)
+
   input_pins = []
   output_pins = []
   input_cells = []
@@ -205,7 +208,8 @@ for net in nets:
   net_dict["net_coupling"] = net_coupling
   net_dict["fanout"] = len(output_pins)
   net_dict["net_route_length"] = get_net_route_length(net)
-  
+  net_dict["total_cap"] = total_cap
+
   if args.w:
     print_net_property_entry(_CircuitOps_File_DIR.net_file, net_dict)
   _CircuitOps_Tables.append_net_property_entry(net_dict)
@@ -220,12 +224,19 @@ libs = db.getLibs()
 func_id = -1
 func_dict = defaultdict()
 func_dict["start"] = -1
+
+libcell_hash_map = defaultdict()
+
 for lib in libs:
   lib_name = lib.getName()
   lib_masters = lib.getMasters()
   for master in lib_masters:
     libcell_dict = defaultdict()
     libcell_name = master.getName()
+    if libcell_name in libcell_hash_map:
+      continue
+    else:
+      libcell_hash_map[libcell_name] = libcell_name
     libcell_area = master.getHeight() * master.getWidth()
 
     libcell_dict["libcell_name"] = libcell_name
@@ -234,7 +245,6 @@ for lib in libs:
     if args.w:
       print_libcell_property_entry(_CircuitOps_File_DIR.libcell_file, libcell_dict)
     _CircuitOps_Tables.append_libcell_property_entry(libcell_dict)
-
 
 
 
