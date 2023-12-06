@@ -29,13 +29,18 @@ from helper import (
 )
 
 def generate_LPG_from_tables(data_root):
-    pin_df, cell_df, net_df, pin_edge_df, cell_edge_df, net_edge_df, net_cell_edge_df, fo4_df = read_tables_OpenROAD(data_root)
+    pin_df, cell_df, net_df, pin_pin_df, cell_pin_df, net_pin_df, net_cell_df, cell_cell_df, fo4_df = read_tables_OpenROAD(data_root)
 
     #### rename dfs
     pin_df = pin_df.rename(columns={"pin_name":"name", "cell_name":"cellname", "net_name":"netname", \
-                                   "pin_tran":"tran", "pin_slack":"slack", "pin_arr":"arr", "input_pin_cap":"cap"})
-    cell_df = cell_df.rename(columns={"cell_name":"name", "libcell_name":"ref"})
+                                    "pin_tran":"tran", "pin_slack":"slack", "pin_rise_arr":"risearr", \
+                                    "pin_fall_arr":"fallarr", "input_pin_cap":"cap", "is_startpoint":"is_start", \
+                                    "is_endpoint":"is_end"})
+    cell_df = cell_df.rename(columns={"cell_name":"name", "libcell_name":"ref", "cell_static_power":"staticpower", \
+                                    "cell_dynamic_power":"dynamicpower"})
     net_df = net_df.rename(columns={"net_name":"name"})
+    
+    fo4_df = fo4_df.rename(columns={"libcell_name":"ref"})
 
     ### add is_macro, is_seq to pin_df, change pin_dir to bool
     cell_type_df = cell_df.loc[:,["name", "is_macro", "is_seq"]]
@@ -72,22 +77,25 @@ def generate_LPG_from_tables(data_root):
     net_df['id'] = range(N_pin+N_cell, total_v_cnt)
 
     ### generate edge_df
-    pin_edge_df, cell_edge_df, net_edge_df, net_cell_edge_df, edge_df = \
-        generate_edge_df_OpenROAD(pin_df, cell_df, net_df, pin_edge_df, cell_edge_df, net_edge_df, net_cell_edge_df)
+    pin_pin_df, cell_pin_df, net_pin_df, net_cell_df, cell_cell_df, edge_df = \
+        generate_edge_df_OpenROAD(pin_df, cell_df, net_df, pin_pin_df, cell_pin_df, net_pin_df, net_cell_df, cell_cell_df)
 
     ### get edge dimensions
-    N_pin_edge, _ = pin_edge_df.shape
-    N_cell_edge, _ = cell_edge_df.shape
-    N_net_edge, _ = net_edge_df.shape
-    N_net_cell_edge, _ = net_cell_edge_df.shape
-    total_e_cnt = N_pin_edge+N_cell_edge+N_net_edge+N_net_cell_edge
+    N_pin_pin, _ = pin_pin_df.shape
+    N_cell_pin, _ = cell_pin_df.shape
+    N_net_pin, _ = net_pin_df.shape
+    N_net_cell, _ = net_cell_df.shape
+    N_cell_cell, _ = cell_cell_df.shape
+    total_e_cnt = N_pin_pin + N_cell_pin + N_net_pin + N_net_cell + N_cell_cell
 
-    edge_df["e_type"] = 0 # pin
+    edge_df["e_type"] = 0 # pin_pin
     # edge_df.loc[0:N_pin_edge,["is_net"]] = pin_edge_df.loc[:, "is_net"]
-    edge_df.loc[N_pin_edge : N_pin_edge+N_cell_edge, ["e_type"]] = 1 # cell
-    edge_df.loc[N_pin_edge+N_cell_edge : N_pin_edge+N_cell_edge+N_net_edge, ["e_type"]] = 2 # net
-    edge_df.loc[N_pin_edge+N_cell_edge+N_net_edge : N_pin_edge+N_cell_edge+N_net_edge+N_net_cell_edge, ["e_type"]] = 3 # net_cell
+    edge_df.loc[N_pin_pin : N_pin_pin+N_cell_pin, ["e_type"]] = 1 # cell_pin
+    edge_df.loc[N_pin_pin+N_cell_pin : N_pin_pin+N_cell_pin+N_net_pin, ["e_type"]] = 2 # net_pin
+    edge_df.loc[N_pin_pin+N_cell_pin+N_net_pin : N_pin_pin+N_cell_pin+N_net_pin+N_net_cell, ["e_type"]] = 3 # net_cell
+    edge_df.loc[N_pin_pin+N_cell_pin+N_net_pin+N_net_cell : N_pin_pin+N_cell_pin+N_net_pin+N_net_cell+N_cell_cell, ["e_type"]] = 4 # cell_cell
 
+    #HERERERERE
     ### generate graph
     g = Graph()
     g.add_vertex(total_v_cnt)
@@ -103,4 +111,4 @@ def generate_LPG_from_tables(data_root):
     g.add_edge_list(edge_df.values.tolist(), eprops=[e_type])
     print("num of nodes, num of edges: ", g.num_vertices(), g.num_edges())
 
-    return g, pin_df, cell_df, net_df, fo4_df, pin_edge_df, cell_edge_df, net_edge_df, net_cell_edge_df, edge_df, v_type, e_type
+    return g, pin_df, cell_df, net_df, fo4_df, pin_pin_df, cell_pin_df, net_pin_df, net_cell_df, cell_cell_df, edge_df, v_type, e_type

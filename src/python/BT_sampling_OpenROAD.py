@@ -38,8 +38,8 @@ cell_cnt_th = 20
 ### nodes: celll/pin id, v_tree_id, v_BT_height, v_bt_s, v_x, v_y, v_arr, v_tran, v_polarity, v_libcell_id
 ### edges: src, tar, e_tree_id
 def BT_sampling(data_root):
-    g, pin_df, cell_df, net_df, fo4_df, pin_edge_df, cell_edge_df, \
-        net_edge_df, net_cell_edge_df, edge_df, v_type, e_type \
+    g, pin_df, cell_df, net_df, fo4_df, pin_pin_df, cell_pin_df, \
+        net_pin_df, net_cell_df, cell_cell_df, edge_df, v_type, e_type \
         = generate_LPG_from_tables(data_root)
 
     ### get dimensions
@@ -48,11 +48,12 @@ def BT_sampling(data_root):
     N_net, _ = net_df.shape
     total_v_cnt = N_pin+N_cell+N_net
 
-    N_pin_edge, _ = pin_edge_df.shape
-    N_cell_edge, _ = cell_edge_df.shape
-    N_net_edge, _ = net_edge_df.shape
-    N_net_cell_edge, _ = net_cell_edge_df.shape
-    total_e_cnt = N_pin_edge+N_cell_edge+N_net_edge+N_net_cell_edge
+    N_pin_pin, _ = pin_pin_df.shape
+    N_cell_pin, _ = cell_pin_df.shape
+    N_net_pin, _ = net_pin_df.shape
+    N_net_cell, _ = net_cell_df.shape
+    N_cell_cell, _ = cell_cell_df.shape
+    total_e_cnt = N_pin_pin + N_cell_pin + N_net_pin + N_net_cell + N_cell_cell
 
     ### add edge props
     e_id = g.new_ep("int")
@@ -72,8 +73,8 @@ def BT_sampling(data_root):
     v_isinv.a[0:N_pin] = pin_df["is_inv"].to_numpy()
     v_isseq.a[0:N_pin] = pin_df["is_seq"].to_numpy()
     # v_pin_isport.a[0:N_pin] = pin_df["is_port"].to_numpy()
-    # v_pin_isstart.a[0:N_pin] = pin_df["is_start"].to_numpy()
-    # v_pin_isend.a[0:N_pin] = pin_df["is_end"].to_numpy()
+    v_pin_isstart.a[0:N_pin] = pin_df["is_start"].to_numpy()
+    v_pin_isend.a[0:N_pin] = pin_df["is_end"].to_numpy()
     v_dir.a[0:N_pin] = pin_df["dir"].to_numpy()
     v_ismacro.a[0:N_pin] = pin_df["is_macro"].to_numpy()
 
@@ -97,23 +98,23 @@ def BT_sampling(data_root):
     pin_cellid[mask] = pin_df[mask].id ### for pins in macro and seq, pin_cellid = pin id
 
     ### add cell2cell edges
-    edges = g.get_edges(eprops=[e_type])
-    mask = edges[:,-1] == 0
-    edges = edges[mask]
-    mask = v_dir.a[edges[:,0]]==False
-    edges = edges[mask]
-    src = edges[:,0]
-    tar = edges[:,1]
-    new_src = pin_cellid[src]
-    new_tar = pin_cellid[tar]
-    N = src.shape[0]
-    temp = np.zeros([N,4])
-    temp[:,0] = pin_cellid[src]
-    temp[:,1] = pin_cellid[tar]
-    temp[:,2] = 4
-    temp[:,3] = range(total_e_cnt, total_e_cnt+N)
-    g.add_edge_list(temp, eprops=[e_type, e_id])
-    total_e_cnt += N
+    #edges = g.get_edges(eprops=[e_type])
+    #mask = edges[:,-1] == 0 #filter out non-pin-pin edges
+    #edges = edges[mask]
+    #mask = v_dir.a[edges[:,0]] == 0 #filter out output signal pins
+    #edges = edges[mask]
+    #src = edges[:,0]
+    #tar = edges[:,1]
+    #new_src = pin_cellid[src]
+    #new_tar = pin_cellid[tar]
+    #N = src.shape[0]
+    #temp = np.zeros([N,4])
+    #temp[:,0] = pin_cellid[src]
+    #temp[:,1] = pin_cellid[tar]
+    #temp[:,2] = 4
+    #temp[:,3] = range(total_e_cnt, total_e_cnt+N)
+    #g.add_edge_list(temp, eprops=[e_type, e_id])
+    #total_e_cnt += N
 
     ### add net id to pin_df
     net_temp = net_df.loc[:, ["name", "id"]]
@@ -342,15 +343,21 @@ def BT_sampling(data_root):
     cell_df = cell_df.merge(cell_worst_cap, on="new_cellname", how="left")
     pin_df = pin_df.merge(cell_worst_cap, on="new_cellname", how="left")
 
-    in_pins = pin_df.loc[in_pins_mask, ['new_cellname',"arr"]]
-    cell_worst_arr = in_pins.groupby('new_cellname', as_index=False).agg({'arr': ['max']})
-    cell_worst_arr.columns = ['_'.join(col).rstrip('_') for col in cell_worst_arr.columns.values]
-    cell_df = cell_df.merge(cell_worst_arr, on="new_cellname", how="left")
+    in_pins = pin_df.loc[in_pins_mask, ['new_cellname',"risearr"]]
+    cell_worst_risearr = in_pins.groupby('new_cellname', as_index=False).agg({'risearr': ['max']})
+    cell_worst_risearr.columns = ['_'.join(col).rstrip('_') for col in cell_worst_risearr.columns.values]
+    cell_df = cell_df.merge(cell_worst_risearr, on="new_cellname", how="left")
 
-    temp = fo4_df.loc[:, ["cell", "libcell_id"]]
-    cell_df = cell_df.merge(temp.rename(columns={"cell":"ref"}), on="ref", how="left")
+    in_pins = pin_df.loc[in_pins_mask, ['new_cellname',"fallarr"]]
+    cell_worst_fallarr = in_pins.groupby('new_cellname', as_index=False).agg({'fallarr': ['max']})
+    cell_worst_fallarr.columns = ['_'.join(col).rstrip('_') for col in cell_worst_fallarr.columns.values]
+    cell_df = cell_df.merge(cell_worst_fallarr, on="new_cellname", how="left")   
+
+    temp = fo4_df.loc[:, ["ref", "libcell_id"]]
+    cell_df = cell_df.merge(temp, on = "ref", how = "left")
     temp = cell_df.loc[:, ["new_cellname", "libcell_id"]]
     pin_df = pin_df.merge(temp, on="new_cellname", how="left")
+    
 
     ### add more vertices features
     v_x = g.new_vp("float")
@@ -368,16 +375,20 @@ def BT_sampling(data_root):
     v_libcell_id.a[0:N_pin] = pin_df["libcell_id"].to_numpy()
     v_libcell_id.a[N_pin:N_pin+N_cell] = cell_df["libcell_id"].to_numpy()
 
-    v_arr = g.new_vp("float")
-    v_arr.a[0:N_pin] = pin_df["arr"].to_numpy()
-    v_arr.a[N_pin:N_pin+N_cell] = cell_df["arr_max"].to_numpy()
+    v_risearr = g.new_vp("float")
+    v_risearr.a[0:N_pin] = pin_df["risearr"].to_numpy()
+    v_risearr.a[N_pin:N_pin+N_cell] = cell_df["risearr_max"].to_numpy()
+
+    v_fallarr = g.new_vp("float")
+    v_fallarr.a[0:N_pin] = pin_df["fallarr"].to_numpy()
+    v_fallarr.a[N_pin:N_pin+N_cell] = cell_df["fallarr_max"].to_numpy()
 
     v_tran = g.new_vp("float")
     v_tran.a[0:N_pin] = pin_df["tran"].to_numpy()
     v_tran.a[N_pin:N_pin+N_cell] = cell_df["tran_max"].to_numpy()
 
     ### get BT features
-    v_ar = BT_g.get_vertices(vprops=[v_tree_id, v_BT_height, v_bt_s, v_x, v_y, v_arr, v_tran, v_polarity, v_libcell_id])
+    v_ar = BT_g.get_vertices(vprops=[v_tree_id, v_BT_height, v_bt_s, v_x, v_y, v_risearr, v_fallarr, v_tran, v_polarity, v_libcell_id])
     e_ar = BT_g.get_edges(eprops=[e_tree_id]).astype("int")
     v_ar = v_ar[v_ar[:,1].argsort()]
     e_ar = e_ar[e_ar[:,2].argsort()]
