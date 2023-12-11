@@ -84,6 +84,16 @@ for inst in insts:
   cell_dict["is_seq"] = is_seq
   is_macro = 1 if master_cell.isBlock() else 0
   cell_dict["is_macro"] = is_macro
+  is_buf = 1 if design.isBuffer(master_cell) else 0
+  cell_dict["is_buf"] = is_buf
+  is_inv = 1 if design.isInverter(master_cell) else 0
+  cell_dict["is_inv"] = is_inv
+  is_in_clk = 1 if design.isInClock(inst) else 0
+  cell_dict["is_in_clk"] = is_in_clk 
+  cell_static_power = design.staticPower(inst, corner)
+  cell_dict["cell_static_power"] = cell_static_power
+  cell_dynamic_power = design.dynamicPower(inst, corner)
+  cell_dict["cell_dynamic_power"] = cell_dynamic_power
 
   #cell-pin
   inst_ITerms = inst.getITerms()

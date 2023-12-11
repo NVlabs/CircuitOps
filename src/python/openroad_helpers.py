@@ -121,16 +121,16 @@ class CircuitOps_Tables:
     cell_entry = {"cell_name": [cell_props["cell_name"]],
                   "is_seq": [cell_props["is_seq"]],
                   "is_macro": [cell_props["is_macro"]],
-                  "is_in_clk": [-1],
+                  "is_in_clk": [cell_props["is_in_clk"]],
                   "x0": [cell_props["x0"]],
                   "y0": [cell_props["y0"]],
                   "x1": [cell_props["x1"]],
                   "y1": [cell_props["y1"]],
-                  "is_buf": [-1],
-                  "is_inv": [-1],
+                  "is_buf": [cell_props["is_buf"]],
+                  "is_inv": [cell_props["is_inv"]],
                   "libcell_name": [cell_props["libcell_name"]],
-                  "cell_static_power": [-1],
-                  "cell_dynamic_power": [-1]
+                  "cell_static_power": [cell_props["cell_static_power"]],
+                  "cell_dynamic_power": [cell_props["cell_dynamic_power"]]
                   }
     cell_entry = pd.DataFrame(cell_entry)
     self.cell_properties = pd.concat([self.cell_properties, cell_entry], ignore_index = True)
@@ -381,16 +381,16 @@ def print_cell_property_entry(outfile, cell_props):
   cell_entry.append(cell_props["cell_name"])#cell_name
   cell_entry.append(str(cell_props["is_seq"]))#is_seq
   cell_entry.append(str(cell_props["is_macro"]))#is_macro
-  cell_entry.append("-1")#is_in_clk
+  cell_entry.append(str(cell_props["is_in_clk"]))#is_in_clk
   cell_entry.append(str(cell_props["x0"]))#x0
   cell_entry.append(str(cell_props["y0"]))#y0
   cell_entry.append(str(cell_props["x1"]))#x1
   cell_entry.append(str(cell_props["y1"]))#y1
-  cell_entry.append("-1")#is_buf
-  cell_entry.append("-1")#is_inv
+  cell_entry.append(str(cell_props["is_buf"]))#is_buf
+  cell_entry.append(str(cell_props["is_inv"]))#is_inv
   cell_entry.append(cell_props["libcell_name"])#libcell_name
-  cell_entry.append("-1")#cell_static_power
-  cell_entry.append("-1")#cell_dynamic_power
+  cell_entry.append(str(cell_props["cell_static_power"]))#cell_static_power
+  cell_entry.append(str(cell_props["cell_dynamic_power"]))#cell_dynamic_power
   final = ",".join(cell_entry)
   with open(outfile, "a") as file:
     file.write(final + "\n")
