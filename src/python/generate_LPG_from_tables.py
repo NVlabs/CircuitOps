@@ -111,4 +111,142 @@ def generate_LPG_from_tables(data_root):
     g.add_edge_list(edge_df.values.tolist(), eprops=[e_type])
     print("num of nodes, num of edges: ", g.num_vertices(), g.num_edges())
 
+    ### add properties to LPG
+    ### processing fo4 table
+    fo4_df["group_id"] = pd.factorize(fo4_df.func_id)[0] + 1
+    fo4_df["libcell_id"] = range(fo4_df.shape[0])
+    libcell_np = fo4_df.to_numpy()
+    
+    ### assign cell size class
+    fo4_df["size_class"] = 0
+    fo4_df["size_class2"] = 0
+    fo4_df["size_cnt"] = 0
+    class_cnt = 50
+    for i in range(fo4_df.group_id.min(), fo4_df.group_id.max()+1):
+        temp = fo4_df.loc[fo4_df.group_id==i, ["group_id", "libcell_delay_fixed_load"]]
+        temp = temp.sort_values(by=['libcell_delay_fixed_load'], ascending=False)
+        fo4_df.loc[temp.index, ["size_class"]] = range(len(temp))
+        fo4_df.loc[temp.index, ["size_cnt"]] = len(temp)
+    
+        temp["size_cnt"] = 0
+        MIN = temp.libcell_delay_fixed_load.min()
+        MAX = temp.libcell_delay_fixed_load.max()
+        interval = (MAX-MIN)/class_cnt
+        for j in range(1, class_cnt):
+            delay_h = MAX - j*interval
+            delay_l = MAX - (j+1)*interval
+            if j == (class_cnt-1):
+                delay_l = MIN
+            temp.loc[(temp.libcell_delay_fixed_load < delay_h) & (temp.libcell_delay_fixed_load >= delay_l), ["size_cnt"]] = j
+        fo4_df.loc[temp.index, ["size_class2"]] = temp["size_cnt"]
+    
+    cell_fo4 = fo4_df.loc[:,["ref", "fo4_delay", "libcell_delay_fixed_load",  "group_id", "libcell_id", "size_class", "size_class2", "size_cnt"]]
+    cell_df = cell_df.merge(cell_fo4, on="ref", how="left")
+    cell_df["libcell_id"] = cell_df["libcell_id"].fillna(-1)
+
+    ### add node and edge ids
+    v_id = g.new_ep("int")
+    v_id.a = range(v_id.a.shape[0])
+    
+    e_id = g.new_ep("int")
+    e_id.a = range(e_id.a.shape[0])
+
+    ### add pin properties to LPG ###
+    v_x = g.new_vp("float")
+    v_y = g.new_vp("float")
+    v_is_in_clk = g.new_vp("bool")
+    v_is_port = g.new_vp("bool")
+    v_is_start = g.new_vp("bool")
+    v_is_end = g.new_vp("bool")
+    v_dir = g.new_vp("bool")
+    v_maxcap = g.new_vp("float")
+    v_maxtran = g.new_vp("float")
+    v_num_reachable_endpoint = g.new_vp("int")
+    v_tran = g.new_vp("float")
+    v_slack = g.new_vp("float")
+    v_risearr = g.new_vp("float")
+    v_fallarr = g.new_vp("float")
+    v_cap = g.new_vp("float")
+    v_is_macro = g.new_vp("bool")
+    v_is_seq = g.new_vp("bool")
+    v_is_buf = g.new_vp("bool")
+    v_is_inv = g.new_vp("bool")
+    
+    
+    v_x.a[0:N_pin] = pin_df["x"].to_numpy()
+    v_y.a[0:N_pin] = pin_df["y"].to_numpy()
+    v_is_in_clk.a[0:N_pin] = pin_df["is_in_clk"].to_numpy()
+    v_is_port.a[0:N_pin] = pin_df["is_port"].to_numpy()
+    v_is_start.a[0:N_pin] = pin_df["is_start"].to_numpy()
+    v_is_end.a[0:N_pin] = pin_df["is_end"].to_numpy()
+    v_dir.a[0:N_pin] = pin_df["dir"].to_numpy()
+    v_maxcap.a[0:N_pin] = pin_df["maxcap"].to_numpy()
+    v_maxtran.a[0:N_pin] = pin_df["maxtran"].to_numpy()
+    v_num_reachable_endpoint.a[0:N_pin] = pin_df["num_reachable_endpoint"].to_numpy()
+    v_tran.a[0:N_pin] = pin_df["tran"].to_numpy()
+    v_slack.a[0:N_pin] = pin_df["slack"].to_numpy()
+    v_risearr.a[0:N_pin] = pin_df["risearr"].to_numpy()
+    v_fallarr.a[0:N_pin] = pin_df["fallarr"].to_numpy()
+    v_cap.a[0:N_pin] = pin_df["cap"].to_numpy()
+    v_is_macro.a[0:N_pin] = pin_df["is_macro"].to_numpy()
+    v_is_seq.a[0:N_pin] = pin_df["is_seq"].to_numpy()
+    v_is_buf.a[0:N_pin] = pin_df["is_buf"].to_numpy()
+    v_is_inv.a[0:N_pin] = pin_df["is_inv"].to_numpy()
+
+    ### add cell properties to LPG ###
+    v_x0 = g.new_vp("float")
+    v_y0 = g.new_vp("float")
+    v_x1 = g.new_vp("float")
+    v_y1 = g.new_vp("float")
+    v_staticpower = g.new_vp("float")
+    v_dynamicpower = g.new_vp("float")
+    
+    v_fo4_delay = g.new_vp("float")
+    v_libcell_delay_fixed_load = g.new_vp("float")
+    v_group_id = g.new_ep("int")
+    v_libcell_id = g.new_ep("int")
+    v_size_class = g.new_ep("int")
+    v_size_class2 = g.new_ep("int")
+    v_size_cnt = g.new_ep("int")
+    
+    
+    v_is_seq.a[N_pin:N_pin+N_cell] = cell_df["is_seq"].to_numpy()
+    v_is_macro.a[N_pin:N_pin+N_cell] = cell_df["is_macro"].to_numpy()
+    v_is_in_clk.a[N_pin:N_pin+N_cell] = cell_df["is_in_clk"].to_numpy()
+    v_x0.a[N_pin:N_pin+N_cell] = cell_df["x0"].to_numpy()
+    v_y0.a[N_pin:N_pin+N_cell] = cell_df["y0"].to_numpy()
+    v_x1.a[N_pin:N_pin+N_cell] = cell_df["x1"].to_numpy()
+    v_y1.a[N_pin:N_pin+N_cell] = cell_df["y1"].to_numpy()
+    v_is_buf.a[N_pin:N_pin+N_cell] = cell_df["is_buf"].to_numpy()
+    v_is_inv.a[N_pin:N_pin+N_cell] = cell_df["is_inv"].to_numpy()
+    v_staticpower.a[N_pin:N_pin+N_cell] = cell_df["staticpower"].to_numpy()
+    v_dynamicpower.a[N_pin:N_pin+N_cell] = cell_df["dynamicpower"].to_numpy()
+    v_x.a[N_pin:N_pin+N_cell] = cell_df["x"].to_numpy()
+    v_y.a[N_pin:N_pin+N_cell] = cell_df["y"].to_numpy()
+    
+    v_fo4_delay.a[N_pin:N_pin+N_cell] = cell_df["fo4_delay"].to_numpy()
+    v_libcell_delay_fixed_load.a[N_pin:N_pin+N_cell] = cell_df["libcell_delay_fixed_load"].to_numpy()
+    v_group_id.a[N_pin:N_pin+N_cell] = cell_df["group_id"].to_numpy()
+    v_libcell_id.a[N_pin:N_pin+N_cell] = cell_df["libcell_id"].to_numpy()
+    v_size_class.a[N_pin:N_pin+N_cell] = cell_df["size_class"].to_numpy()
+    v_size_class2.a[N_pin:N_pin+N_cell] = cell_df["size_class2"].to_numpy()
+    v_size_cnt.a[N_pin:N_pin+N_cell] = cell_df["size_cnt"].to_numpy()
+
+    ### add net properties to LPG ###
+    v_net_route_length = g.new_vp("float")
+    v_net_steiner_length = g.new_vp("float")
+    v_fanout = g.new_vp("int")
+    v_total_cap = g.new_vp("float")
+    v_net_cap = g.new_vp("float")
+    v_net_coupling = g.new_vp("float")
+    v_net_res = g.new_vp("float")
+    
+    v_net_route_length.a[N_pin+N_cell:N_pin+N_cell+N_net] = net_df["net_route_length"].to_numpy()
+    v_net_steiner_length.a[N_pin+N_cell:N_pin+N_cell+N_net] = net_df["net_steiner_length"].to_numpy()
+    v_fanout.a[N_pin+N_cell:N_pin+N_cell+N_net] = net_df["fanout"].to_numpy()
+    v_total_cap.a[N_pin+N_cell:N_pin+N_cell+N_net] = net_df["total_cap"].to_numpy()
+    v_net_cap.a[N_pin+N_cell:N_pin+N_cell+N_net] = net_df["net_cap"].to_numpy()
+    v_net_coupling.a[N_pin+N_cell:N_pin+N_cell+N_net] = net_df["net_coupling"].to_numpy()
+    v_net_res.a[N_pin+N_cell:N_pin+N_cell+N_net] = net_df["net_res"].to_numpy()
+
     return g, pin_df, cell_df, net_df, fo4_df, pin_pin_df, cell_pin_df, net_pin_df, net_cell_df, cell_cell_df, edge_df, v_type, e_type
