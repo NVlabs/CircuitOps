@@ -97,25 +97,6 @@ def BT_sampling(data_root):
     mask = (pin_isseq==True)| (pin_ismacro==True)
     pin_cellid[mask] = pin_df[mask].id ### for pins in macro and seq, pin_cellid = pin id
 
-    ### add cell2cell edges
-    #edges = g.get_edges(eprops=[e_type])
-    #mask = edges[:,-1] == 0 #filter out non-pin-pin edges
-    #edges = edges[mask]
-    #mask = v_dir.a[edges[:,0]] == 0 #filter out output signal pins
-    #edges = edges[mask]
-    #src = edges[:,0]
-    #tar = edges[:,1]
-    #new_src = pin_cellid[src]
-    #new_tar = pin_cellid[tar]
-    #N = src.shape[0]
-    #temp = np.zeros([N,4])
-    #temp[:,0] = pin_cellid[src]
-    #temp[:,1] = pin_cellid[tar]
-    #temp[:,2] = 4
-    #temp[:,3] = range(total_e_cnt, total_e_cnt+N)
-    #g.add_edge_list(temp, eprops=[e_type, e_id])
-    #total_e_cnt += N
-
     ### add net id to pin_df
     net_temp = net_df.loc[:, ["name", "id"]]
     net_temp = net_temp.rename(columns={"name":"netname", "id":"net_id"})
@@ -353,8 +334,6 @@ def BT_sampling(data_root):
     cell_worst_fallarr.columns = ['_'.join(col).rstrip('_') for col in cell_worst_fallarr.columns.values]
     cell_df = cell_df.merge(cell_worst_fallarr, on="new_cellname", how="left")   
 
-    temp = fo4_df.loc[:, ["ref", "libcell_id"]]
-    cell_df = cell_df.merge(temp, on = "ref", how = "left")
     temp = cell_df.loc[:, ["new_cellname", "libcell_id"]]
     pin_df = pin_df.merge(temp, on="new_cellname", how="left")
     
@@ -435,3 +414,5 @@ if __name__ == "__main__":
         pickle.dump(nodes, f, pickle.HIGHEST_PROTOCOL)
     with open(output_path + 'BT_edges.pkl', 'wb') as f:
         pickle.dump(edges, f, pickle.HIGHEST_PROTOCOL)
+
+    print("------------Done------------")
