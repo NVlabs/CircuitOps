@@ -102,7 +102,7 @@ foreach inst $insts {
   set is_macro [$master_cell isBlock]; #POPULATED?
   dict set cell_dict is_macro $is_macro
   
-  dict set cell_dict is_in_clk [check_inst_is_in_clk $inst $clk_nets]
+  set cell_is_in_clk 0
 
   #cell-pins
   set inst_ITerms [$inst getITerms]
@@ -118,6 +118,9 @@ foreach inst $insts {
 
     if {!([::sta::Net_is_power [get_net $pin_net_name]] || [::sta::Net_is_ground [get_net $pin_net_name]])} {
       set is_in_clk [check_pin_is_in_clk $ITerm $clk_nets]
+      if {$is_in_clk == 1} {
+        set cell_is_in_clk 1
+      }
       if {[info exists dict_num_reachable_endpoint]} {
         if {[dict exists $dict_num_reachable_endpoint $pin_net_name]} {
           set num_reachable_endpoint [dict get $dict_num_reachable_endpoint $pin_net_name]
@@ -171,11 +174,13 @@ foreach inst $insts {
       foreach stpt $start_points {
         if {$stpt == $pin_name} {
           set is_startpoint 1
+          break
         }
       }
       foreach edpt $end_points {
         if {$edpt == $pin_name} {
           set is_endpoint 1
+          break
         }
       }
 
@@ -236,7 +241,8 @@ foreach inst $insts {
   lassign $inst_power inst_pwr_intern inst_pwr_switch inst_pwr_leak inst_pwr_total
   dict set cell_dict cell_static_power $inst_pwr_leak
   dict set cell_dict cell_dynamic_power [expr {$inst_pwr_switch + $inst_pwr_intern}]
-
+  #check if cell is in clk
+  dict set cell_dict is_in_clk $cell_is_in_clk
   print_cell_property_entry $cell_outfile $cell_dict
 }
 close $cell_outfile
