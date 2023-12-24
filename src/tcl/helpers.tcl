@@ -15,9 +15,9 @@
 
 proc check_inst_is_in_clk {inst clk_nets} {
   set is_in_clk 0
-  set cell_nets [$inst getITerms]
-  foreach cell_net $cell_nets {
-    set pin_nets [$cell_net getNet]
+  set cell_pins [$inst getITerms]
+  foreach cell_pin $cell_pins {
+    set pin_nets [$cell_pin getNet]
     foreach pin_net $pin_nets {
       foreach clk_net $clk_nets {
         if {$pin_net == $clk_net} {
