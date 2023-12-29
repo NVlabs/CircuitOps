@@ -214,8 +214,25 @@ proc get_arc_delay {edge corner} {
   return $delays_
 }
 
-proc get_fix_load_delay {inst corner fix_load_insts tmp_net} {
-  set inst_ITerms [$inst getITerms]
+proc get_fix_load_load_cells {name} {
+  set fix_load_ref_inv_lib_cell [get_lib_cells $name]
+  set fix_load_insts {}
+  for {set i 0} {$i < 4} {incr i} {
+    set fix_load_ref_inv_inst [::sta::make_instance tmp_inst$i $fix_load_ref_inv_lib_cell]
+    lappend fix_load_insts $fix_load_ref_inv_inst
+  }
+  return $fix_load_insts
+}
+
+proc get_fix_load_delay {libcell_name corner fix_load_insts} {
+  set libcell [get_lib_cells $libcell_name]
+  set tmp_inst [::sta::make_instance tmp_inst $libcell]
+  set tmp_db_inst [::sta::sta_to_db_inst $tmp_inst]
+
+  set tmp_out_net [::sta::make_net tmp_out_net]
+  
+  set inst_ITerms [$tmp_db_inst getITerms]
+
   foreach inst_ITerm $inst_ITerms {
     set pin_name [get_ITerm_name $inst_ITerm]
     if {[$inst_ITerm isInputSignal]} {
@@ -229,6 +246,7 @@ proc get_fix_load_delay {inst corner fix_load_insts tmp_net} {
          unset output_pin
       }
       set output_pin [get_pin $pin_name]
+      ::sta::connect_pin $tmp_out_net $output_pin
     }
   }
 
@@ -246,7 +264,7 @@ proc get_fix_load_delay {inst corner fix_load_insts tmp_net} {
   }
   
   foreach fix_load_inst_pin $fix_load_inst_pins {
-    ::sta::connect_pin $tmp_net $fix_load_inst_pin
+    ::sta::connect_pin $tmp_out_net $fix_load_inst_pin
   }
 
   set fix_load_delays {}
@@ -265,7 +283,6 @@ proc get_fix_load_delay {inst corner fix_load_insts tmp_net} {
       }
     }
     unset input_pin
-    unset output_pin
   }
   set fix_load_delay -1
   if {[llength $fix_load_delays] > 0} {
@@ -278,12 +295,28 @@ proc get_fix_load_delay {inst corner fix_load_insts tmp_net} {
   if {$fix_load_delay == -1} {
     set fix_load_delay None
   }
+  
+  foreach fix_load_inst_pin $fix_load_inst_pins {
+    ::sta::disconnect_pin $tmp_out_net $fix_load_inst_pin
+  }
+  if {[info exist output_pin]} {
+    ::sta::disconnect_pin $tmp_out_net $output_pin
+    unset output_pin
+  }
+  ::sta::delete_net $tmp_out_net
+  ::sta::delete_instance $tmp_inst
   return $fix_load_delay      
 }
 
 
-proc get_fo4_delay {inst corner tmp_net lib_cell} {
-  set inst_ITerms [$inst getITerms]
+proc get_fo4_delay {libcell_name corner} {
+  set libcell [get_lib_cells $libcell_name]
+  set tmp_inst [::sta::make_instance tmp_inst $libcell]
+  set tmp_db_inst [::sta::sta_to_db_inst $tmp_inst]
+  
+  set tmp_out_net [::sta::make_net tmp_out_net]
+  
+  set inst_ITerms [$tmp_db_inst getITerms]
   foreach inst_ITerm $inst_ITerms {
     set pin_name [get_ITerm_name $inst_ITerm]
     if {[$inst_ITerm isInputSignal]} {
@@ -292,24 +325,20 @@ proc get_fo4_delay {inst corner tmp_net lib_cell} {
       }
       set input_pin [get_pin $pin_name]
     }
-  }
-  foreach inst_ITerm $inst_ITerms {
-    set pin_name [get_ITerm_name $inst_ITerm]
     if {[$inst_ITerm isOutputSignal]} {
       if {[info exists output_pin]} {
         unset output_pin
       }
       set output_pin [get_pin $pin_name]
+      ::sta::connect_pin $tmp_out_net $output_pin
     }
   }
   
   set fo4_load_insts {}
   for {set i 0} {$i < 4} {incr i} {
-    set fo4_load_ref_inv_inst [::sta::make_instance tmp_inst$i$i $lib_cell]
-    set fo4_load_ref_inv_db_inst [::sta::sta_to_db_inst $fo4_load_ref_inv_inst]
+    set fo4_load_ref_inv_inst [::sta::make_instance tmp_inst$i$i $libcell]
     lappend fo4_load_insts $fo4_load_ref_inv_inst
   }
-
   set fo4_load_inst_pins {}  
   foreach fo4_load_sta_inst $fo4_load_insts {
     set fo4_load_inst [::sta::sta_to_db_inst $fo4_load_sta_inst]
@@ -323,7 +352,7 @@ proc get_fo4_delay {inst corner tmp_net lib_cell} {
     }
   }
   foreach fo4_load_inst_pin $fo4_load_inst_pins {
-    ::sta::connect_pin $tmp_net $fo4_load_inst_pin
+    ::sta::connect_pin $tmp_out_net $fo4_load_inst_pin
   }
 
   set fo4_delays {}
@@ -342,7 +371,7 @@ proc get_fo4_delay {inst corner tmp_net lib_cell} {
       }
     }
     unset input_pin
-    unset output_pin
+    #unset output_pin
   }
   set fo4_delay -1
   if {[llength $fo4_delays] > 0} {
@@ -357,13 +386,164 @@ proc get_fo4_delay {inst corner tmp_net lib_cell} {
   }
   
   foreach fo4_load_inst_pin $fo4_load_inst_pins {
-    ::sta::disconnect_pin $tmp_net $fo4_load_inst_pin
+    ::sta::disconnect_pin $tmp_out_net $fo4_load_inst_pin
   }
   foreach fo4_load_inst $fo4_load_insts {
     ::sta::delete_instance $fo4_load_inst
   }
+  if {[info exist output_pin]} {
+    ::sta::disconnect_pin $tmp_out_net $output_pin
+    unset output_pin
+  }
+  ::sta::delete_net $tmp_out_net
+  ::sta::delete_instance $tmp_inst
   unset fo4_load_insts
   return $fo4_delay
+}
+
+proc pin_in_list {name pin_list} {
+  set result 0
+  foreach pt $pin_list {
+    if {$pt == $name} {
+      set result 1
+      break
+    }
+  }
+  return $result
+}
+
+proc get_pin_x {ITerm} {
+  set pin_x 0
+  set count 0
+  set pin_geometries [$ITerm getGeometries]
+  foreach pin_geometry $pin_geometries {
+    set tmp_pin_x [expr {[$pin_geometry xMin] + [$pin_geometry xMax]}]
+    set tmp_pin_x [expr {$tmp_pin_x / 2}]
+    set count [expr {$count + 1}]
+    set pin_x [expr {$pin_x + $tmp_pin_x}]
+  }
+  set pin_x [expr {$pin_x / $count}]
+  return $pin_x
+}
+
+proc get_pin_y {ITerm} {
+  set pin_y 0
+  set count 0
+  set pin_geometries [$ITerm getGeometries]
+  foreach pin_geometry $pin_geometries {
+    set tmp_pin_y [expr {[$pin_geometry yMin] + [$pin_geometry yMax]}]
+    set tmp_pin_y [expr {$tmp_pin_y / 2}]
+    set count [expr {$count + 1}]
+    set pin_y [expr {$pin_y + $tmp_pin_y}]
+  }
+  set pin_y [expr {$pin_y / $count}]
+  return $pin_y
+}
+
+proc get_pin_input_cap {name corner} {
+  set libport [::sta::Pin_liberty_port [get_pin $name]]
+  if {$libport != "NULL"} {
+    set libport_cap [::sta::LibertyPort_capacitance $libport $corner max]
+    if {$libport_cap == 0.0} {
+      set libport_cap None
+    }
+  } else {
+    set libport_cap None
+  }
+  return $libport_cap
+}
+
+proc get_pin_num_reachable_endpoint {pin_ITerm end_points} {
+  set pin_net [$pin_ITerm getNet]
+  set pin_net_ITerms [$pin_net getITerms]
+  set num_reachable_endpoint 0
+  foreach pin_net_ITerm $pin_net_ITerms {
+    set tmp_pin_name [get_ITerm_name $pin_net_ITerm]
+    foreach edpt $end_points {
+      if {$edpt == $tmp_pin_name} {
+        set num_reachable_endpoint [expr {$num_reachable_endpoint + 1}]
+      }
+    }
+  }
+  return $num_reachable_endpoint
+}
+
+proc get_libcell_worst_input_pin_cap {libcell_name corner} {
+  set libcell [get_lib_cells $libcell_name]
+  set tmp_inst [::sta::make_instance tmp_inst $libcell]
+  set tmp_db_inst [::sta::sta_to_db_inst $tmp_inst]
+  set inst_ITerms [$tmp_db_inst getITerms]
+  set input_caps {}
+  foreach inst_ITerm $inst_ITerms {
+    set pin_name [get_ITerm_name $inst_ITerm]
+    if ([$inst_ITerm isInputSignal]) {
+      set libport [::sta::Pin_liberty_port [get_pin $pin_name]]
+      if {$libport != "NULL"} {
+        set libport_cap [::sta::LibertyPort_capacitance $libport $corner max]
+        lappend input_caps $libport_cap
+      }
+    }
+  }
+  ::sta::delete_instance $tmp_inst
+  
+  set worst_input_cap 0
+  foreach input_cap $input_caps {
+    if {$input_cap > $worst_input_cap} {
+      set worst_input_cap $input_cap
+    }
+  }
+  if {$worst_input_cap == 0} {
+    set worst_input_cap None
+  }
+  return $worst_input_cap
+}
+
+proc get_libcell_leakage_power {libcell_name corner} {
+  set libcell [get_lib_cells $libcell_name]
+  set tmp_inst [::sta::make_instance tmp_inst $libcell]
+  set sta_cell [get_cell tmp_inst]
+  set inst_power [::sta::instance_power $sta_cell $corner]
+  lassign $inst_power inst_pwr_intern inst_pwr_switch inst_pwr_leak inst_pwr_total
+  ::sta::delete_instance $tmp_inst
+  return $inst_pwr_leak
+}
+
+proc get_cell_leakage_power {name corner} {
+  set sta_cell [get_cell $name]
+  set inst_power [::sta::instance_power $sta_cell $corner]
+  lassign $inst_power inst_pwr_intern inst_pwr_switch inst_pwr_leak inst_pwr_total
+  return $inst_pwr_leak
+}
+
+proc get_cell_switch_power {name corner} {
+  set sta_cell [get_cell $name]
+  set inst_power [::sta::instance_power $sta_cell $corner]
+  lassign $inst_power inst_pwr_intern inst_pwr_switch inst_pwr_leak inst_pwr_total
+  return $inst_pwr_switch
+}
+
+proc get_cell_internal_power {name corner} {
+  set sta_cell [get_cell $name]
+  set inst_power [::sta::instance_power $sta_cell $corner]
+  lassign $inst_power inst_pwr_intern inst_pwr_switch inst_pwr_leak inst_pwr_total
+  return $inst_pwr_intern
+}
+
+proc find_func_id {lib_dict libcell_name} {
+  set max_func_id -1
+  dict for {lib_id func_id} $lib_dict {
+    if {$func_id > $max_func_id} {
+      set max_func_id $func_id
+    }
+    set cell1 [::sta::find_liberty_cell $lib_id]
+    set cell2 [::sta::find_liberty_cell $libcell_name]
+    if {$cell1 == "" || $cell2 == "" || $cell1 == "NULL" || $cell2 == "NULL"} {continue}
+    if {[::sta::equiv_cells $cell1 $cell2]} {
+      return [list 1 $func_id]
+    }
+  }
+  set func_id [expr $max_func_id + 1]
+  return [list 0 $func_id]
 }
 
 proc load_design {def netlist libs tech_lef lefs sdc design spef} {
@@ -488,5 +668,4 @@ proc print_libcell_property_entry {outfile libcell_props} {
   lappend libcell_entry [dict get $libcell_props "fix_load_delay"];#libcell_delay_fixed_load
   puts $outfile [join $libcell_entry ","]
 }
-
 
