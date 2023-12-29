@@ -49,6 +49,9 @@ puts " NUMBER OF INSTANCES [llength $insts]"
 
 set clk_nets [::sta::find_all_clk_nets]
 
+##########################################
+#get startpoints & endpoints from OpenSTA#
+##########################################
 set startpoints [::sta::startpoints]
 set start_points {}
 foreach startpoint $startpoints {
@@ -73,8 +76,15 @@ foreach endpoint $endpoints {
   lappend end_points "${end_point_inst_name}/${end_point_mterm_name}"
 }
 
+###########################
+#get default design corner#
+###########################
 set corner [::sta::cmd_corner]
 
+############################################
+#iterate through each instance and its pins#
+#for the properties                        #
+############################################
 foreach inst $insts {
   set cell_name [$inst getName]
   dict set cell_dict cell_name $cell_name
@@ -82,27 +92,27 @@ foreach inst $insts {
   set master_cell [$inst getMaster]
   set master_name [$master_cell getName]
 
-  # cell properties
-  #location
+  #cell properties
   set BBox [$inst getBBox]
   dict set cell_dict x0 [$BBox xMin]
   dict set cell_dict y0 [$BBox yMin]
   dict set cell_dict x1 [$BBox xMax]
   dict set cell_dict y1 [$BBox yMax]
-
   dict set cell_dict libcell_name $master_name 
   dict set cell_dict is_inv [get_property [get_lib_cells $master_name] is_inverter]
   dict set cell_dict is_buf [get_property [get_lib_cells $master_name] is_buffer]
+  
   set is_seq [expr [string first "DFF" $master_name] != -1]
   set is_macro [$master_cell isBlock];
   dict set cell_dict is_seq $is_seq
   dict set cell_dict is_macro $is_macro
   
   set cell_is_in_clk 0
-  #cell-pins
   set inst_ITerms [$inst getITerms]
+  ######################
+  #iterate through pins#
+  ######################
   foreach ITerm $inst_ITerms {
-    #pin properties
     set pin_name [get_ITerm_name $ITerm] 
     set pin [get_pin $pin_name]
     set pin_net_name [[$ITerm getNet] getName]
@@ -143,8 +153,9 @@ foreach inst $insts {
       print_pin_property_entry $pin_outfile $pin_dict
     }
 
-    #cell-pin
-    #cell-net
+    #################################################
+    #build cell-pin edge table & cell-net edge table#
+    #################################################
     set input_pins {}
     set output_pins {}
     if {[$ITerm isInputSignal]} {
@@ -157,7 +168,9 @@ foreach inst $insts {
       lappend output_pins $pin_name
     }
   }
-  #pin-pin
+  ##########################
+  #build pin-pin edge table#
+  ##########################
   if {$is_macro == 0 && $is_seq == 0 } {
     print_ip_op_pairs $pin_pin_outfile $input_pins $output_pins 0 $corner
   }
@@ -184,14 +197,14 @@ puts $net_outfile [join $header ","]
 set net_pin_outfile [open $net_pin_file w]
 puts $net_pin_outfile "src,tar,src_type,tar_type"
 
-
-#net loop
+######################
+#iterate through nets#
+######################
 foreach net $nets {
   set net_name [$net getName]
   set total_cap [::sta::Net_capacitance [get_net $net_name] $corner max]
   set net_ITerms [$net getITerms]
 
-  #net properties$
   dict set net_dict net_name $net_name
   dict set net_dict net_cap [[get_net $net_name] wire_capacitance $corner max]
   dict set net_dict net_res [$net getTotalResistance]
@@ -201,7 +214,9 @@ foreach net $nets {
   set output_pins {}
   set input_cells {}
   set output_cells {}
-  #net-pin
+  ##########################
+  #build net-pin edge table#
+  ##########################
   set net_ITerms [$net getITerms]
   foreach ITerm $net_ITerms {
     set ITerm_name [get_ITerm_name $ITerm]
@@ -240,10 +255,14 @@ set libs [$db getLibs]
 set func_id -1
 dict set func_dict start -1
 
-#get fix load ref cap
-
+############################
+#set fix load reference cap#
+############################
 set fix_load_insts [get_fix_load_load_cells "INV_X1"]
 
+###########################
+#iterate through libraries#
+###########################
 foreach lib $libs {
   set lib_name [$lib getName]
   if {[string first "NangateOpenCellLibrary"  $lib_name] != -1} {
@@ -256,8 +275,10 @@ foreach lib $libs {
 
   foreach master $lib_masters {
     set libcell_name [$master getName]
-
-    #filter duplicate
+    
+    ###########################
+    #filter duplicate libcells#
+    ###########################
     if {[info exists libcell_name_map]} {
       if {[dict exists $libcell_name_map $libcell_name]} {
         continue  
@@ -293,4 +314,4 @@ foreach fix_load_inst $fix_load_insts {
   ::sta::delete_instance $fix_load_inst
 }
 
-#exit
+exit
