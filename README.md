@@ -101,4 +101,5 @@ The following command to generate the relations tables in the ./IRs/ directory.
 
 ## Cite this work
 
+* R. Liang, A. Agnesina, G. Pradipta, V. A. Chhabria and H. Ren, "**CircuitOps: An ML Infrastructure Enabling Generative AI for VLSI Circuit Optimization**", 2023 IEEE/ACM International Conference on Computer Aided Design (ICCAD). ([preprint](https://ieeexplore.ieee.org/abstract/document/10323611))
 
