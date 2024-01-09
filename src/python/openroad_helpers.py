@@ -44,7 +44,7 @@ class CircuitOps_Tables:
                               "worst_input_cap": [],
                               "libcell_leakage": [],
                               "fo4_delay": [],
-                              "libcell_delay_fixed_load": []
+                              "fix_load_delay": []
                               }
     self.libcell_properties = pd.DataFrame(self.libcell_properties)
 
@@ -139,21 +139,21 @@ class CircuitOps_Tables:
     pin_entry = {"pin_name": [pin_props["pin_name"]],
                 "x": [pin_props["x"]],
                 "y": [pin_props["y"]],
-                "is_in_clk": [-1],
+                "is_in_clk": [pin_props["is_in_clk"]],
                 "is_port": [-1],
                 "is_startpoint": [-1],
-                "is_endpoint": [-1],
+                "is_endpoint": [pin_props["is_endpoint"]],
                 "dir": [pin_props["dir"]],
                 "maxcap": [-1],
                 "maxtran": [-1],
-                "num_reachable_endpoint": [-1],
+                "num_reachable_endpoint": [pin_props["num_reachable_endpoint"]],
                 "cell_name": [pin_props["cell_name"]],
                 "net_name": [pin_props["net_name"]],
-                "pin_tran": [-1],
-                "pin_slack": [-1],
-                "pin_rise_arr": [-1],
-                "pin_fall_arr": [-1],
-                "input_pin_cap": [-1]
+                "pin_tran": [pin_props["pin_tran"]],
+                "pin_slack": [pin_props["pin_slack"]],
+                "pin_rise_arr": [pin_props["pin_rise_arr"]],
+                "pin_fall_arr": [pin_props["pin_fall_arr"]],
+                "input_pin_cap": [pin_props["input_pin_cap"]]
                 }
     pin_entry = pd.DataFrame(pin_entry)
     self.pin_properties = pd.concat([self.pin_properties, pin_entry], ignore_index = True)
@@ -164,9 +164,9 @@ class CircuitOps_Tables:
                 "net_steiner_length": [-1],
                 "fanout": [net_props["fanout"]],
                 "total_cap": [net_props["total_cap"]],
-                "net_cap": [-1],
-                "net_coupling": [-1],
-                "net_res": [-1]
+                "net_cap": [net_props["net_cap"]],
+                "net_coupling": [net_props["net_coupling"]],
+                "net_res": [net_props["net_res"]]
                 }
     net_entry = pd.DataFrame(net_entry)
     self.net_properties = pd.concat([self.net_properties, net_entry], ignore_index = True)
@@ -178,7 +178,7 @@ class CircuitOps_Tables:
                     "worst_input_cap": [-1],
                     "libcell_leakage": [-1],
                     "fo4_delay": [-1],
-                    "libcell_delay_fixed_load": [-1]
+                    "fix_load_delay": [-1]
                     }
     libcell_entry = pd.DataFrame(libcell_entry)
     self.libcell_properties = pd.concat([self.libcell_properties, libcell_entry], ignore_index = True)
@@ -195,6 +195,7 @@ class CircuitOps_Tables:
         self.cell_cell_edge = pd.concat([self.cell_cell_edge, ip_op_cell_pairs], ignore_index = True)
 
   def append_ip_op_pairs(self, input_pins, output_pins, is_net):
+    count = 0
     for i_p_ in input_pins:
       for o_p_ in output_pins:
         ip_op_pairs = {"src": [i_p_],
@@ -206,6 +207,7 @@ class CircuitOps_Tables:
                       }
         ip_op_pairs = pd.DataFrame(ip_op_pairs)
         self.pin_pin_edge = pd.concat([self.pin_pin_edge, ip_op_pairs], ignore_index = True)
+        count += 1
 
   def append_cell_net_edge(self, first_name, second_name, cell_net):
     if cell_net:
@@ -353,6 +355,7 @@ def add_global_connection(design, *,
 
 def load_design(_CircuitOps_File_DIR):
   tech = Tech()
+  tech_design = ord.Tech()
   for libFile in _CircuitOps_File_DIR.LIB_FILES:  
     tech.readLiberty(libFile)
   for techFile in _CircuitOps_File_DIR.TECH_LEF_FILE:
@@ -368,13 +371,7 @@ def load_design(_CircuitOps_File_DIR):
   add_global_connection(design, net_name="VDD", pin_pattern="VDD", power=True)
   add_global_connection(design, net_name="VSS", pin_pattern="VSS", ground=True)
   odb.dbBlock.globalConnect(ord.get_db_block())
-  return design
-
-def get_ITerm_name(ITerm):
-  MTerm_name = ITerm.getMTerm().getName()
-  inst_name = ITerm.getInst().getName()
-  ITerm_name = "{}/{}".format(inst_name, MTerm_name)
-  return ITerm_name
+  return tech_design, design
 
 def print_cell_property_entry(outfile, cell_props):
   cell_entry = []
@@ -401,21 +398,21 @@ def print_pin_property_entry(outfile, pin_props):
   pin_entry.append(pin_props["pin_name"])#pin_name
   pin_entry.append(str(pin_props["x"]))#x
   pin_entry.append(str(pin_props["y"]))#y
-  pin_entry.append("-1")#is_in_clk
+  pin_entry.append(str(pin_props["is_in_clk"]))#is_in_clk
   pin_entry.append("-1")#is_port
   pin_entry.append("-1")#is_startpoint
-  pin_entry.append("-1")#is_endpoint
+  pin_entry.append(str(pin_props["is_endpoint"]))#is_endpoint
   pin_entry.append(str(pin_props["dir"]))#dir
   pin_entry.append("-1")#maxcap
   pin_entry.append("-1")#maxtran
-  pin_entry.append("-1")#num_reachable_endpoint
+  pin_entry.append(str(pin_props["num_reachable_endpoint"]))#num_reachable_endpoint
   pin_entry.append(pin_props["cell_name"])#cell_name
   pin_entry.append(pin_props["net_name"])#net_name
-  pin_entry.append("-1")#pin_tran
-  pin_entry.append("-1")#pin_slack
-  pin_entry.append("-1")#pin_rise_arr
-  pin_entry.append("-1")#pin_fall_arr
-  pin_entry.append("-1")#input_pin_cap
+  pin_entry.append(str(pin_props["pin_tran"]))#pin_tran
+  pin_entry.append(str(pin_props["pin_slack"]))#pin_slack
+  pin_entry.append(str(pin_props["pin_rise_arr"]))#pin_rise_arr
+  pin_entry.append(str(pin_props["pin_fall_arr"]))#pin_fall_arr
+  pin_entry.append(str(pin_props["input_pin_cap"]))#input_pin_cap
   final = ",".join(pin_entry)
   with open(outfile, "a") as file:
     file.write(final + "\n")
@@ -427,10 +424,12 @@ def print_ip_op_cell_pairs(outfile, inputs, outputs):
         file.write("{},{},{},{}\n".format(input, output, "cell", "cell"))
 
 def print_ip_op_pairs(outfile, input_pins, output_pins, is_net):
+  count = 0
   with open(outfile, "a") as file:
     for i_p_ in input_pins:
       for o_p_ in output_pins:
-        file.write("{},{},{},{},{},{}\n".format(i_p_, o_p_, "pin", "pin", is_net, str(-1)))
+        file.write("{},{},{},{},{},{}\n".format(i_p_, o_p_, "pin", "pin", is_net, -1))#arc_delays[count]))
+        count += 1
 
 def get_net_route_length(net):
   net_route_length = 0
@@ -456,7 +455,7 @@ def print_net_property_entry(outfile, net_props):
   net_entry.append(str(net_props["net_route_length"]))#net_route_length
   net_entry.append("-1")#net_steiner_length
   net_entry.append(str(net_props["fanout"]))#fanout
-  net_entry.append("-1")#total_cap
+  net_entry.append(str(net_props["total_cap"]))#total_cap
   net_entry.append(str(net_props["net_cap"]))#net_cap
   net_entry.append(str(net_props["net_coupling"]))#net_coupling
   net_entry.append(str(net_props["net_res"]))#net_res
@@ -466,21 +465,47 @@ def print_net_property_entry(outfile, net_props):
 
 def print_libcell_property_entry(outfile, libcell_props):
   libcell_entry = []
-  libcell_entry.append(libcell_props["libcell_name"])#libcell_name
-  libcell_entry.append("-1")#func. id (*8)
+  libcell_entry.append(str(libcell_props["libcell_name"]))#libcell_name
+  libcell_entry.append('-1')#func. id (*8)
   libcell_entry.append(str(libcell_props["libcell_area"]))#libcell_area
-  libcell_entry.append("-1")#worst_input_cap(*5)
-  libcell_entry.append("-1")#libcell_leakage
-  libcell_entry.append("-1")#fo4_delay
-  libcell_entry.append("-1")#libcell_delay_fixed_load
+  libcell_entry.append('-1')#worst_input_cap(*5)
+  libcell_entry.append('-1')#libcell_leakage
+  libcell_entry.append('-1')#fo4_delay
+  libcell_entry.append('-1')#libcell_delay_fixed_load
   final = ",".join(libcell_entry)
   with open(outfile, "a") as file:
     file.write(final + "\n")
 
+def Pin_X(ITerm):
+  pin_x, count = 0, 0
+  pin_geometries = ITerm.getGeometries()
+  for pin_geometry in pin_geometries:
+    tmp_pin_x = pin_geometry.xMin() + pin_geometry.xMax()
+    tmp_pin_x = tmp_pin_x /2
+    count = count + 1
+    pin_x = pin_x + tmp_pin_x
+  pin_x = pin_x / count
+  return pin_x
 
+def Pin_Y(ITerm):
+  pin_y, count = 0, 0
+  pin_geometries = ITerm.getGeometries()
+  for pin_geometry in pin_geometries:
+    tmp_pin_y = pin_geometry.yMin() + pin_geometry.yMax()
+    tmp_pin_y = tmp_pin_y /2
+    count = count + 1
+    pin_y = pin_y + tmp_pin_y
+  pin_y = pin_y / count
+  return pin_y
 
-
-
+def Pin_Num_Reachable_Endpoint(ITerm, timing):
+  tmp_net = ITerm.getNet()
+  tmp_ITerms = tmp_net.getITerms()
+  num = 0
+  for tmp_ITerm in tmp_ITerms:
+    if timing.isEndpoint(tmp_ITerm):
+      num += 1
+  return num
 
 
 
