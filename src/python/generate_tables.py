@@ -134,7 +134,7 @@ for inst in insts:
       pin_dict["pin_fall_arr"] = timing.getPinArrival(ITerm, timing.Fall)
       
       if ITerm.isInputSignal():
-        pin_dict["input_pin_cap"] = timing.LibertyPortCapacitance(ITerm, timing.Max)
+        pin_dict["input_pin_cap"] = timing.getPortCap(ITerm, corner, timing.Max)
         #pin_dict["maxcap"] = "None"
       else:
         pin_dict["input_pin_cap"] = "None"
