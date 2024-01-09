@@ -196,7 +196,7 @@ proc print_ip_op_pairs {outfile input_pins output_pins is_net corner} {
           }
         }
       } else {
-        set arc_delay " "
+        set arc_delay "None"
       }
       puts $outfile "${i_p_},${o_p_},pin,pin,$is_net,$arc_delay"
     }
@@ -232,22 +232,22 @@ proc get_fix_load_delay {libcell_name corner fix_load_insts} {
   set tmp_out_net [::sta::make_net tmp_out_net]
   
   set inst_ITerms [$tmp_db_inst getITerms]
-
+  set input_pins {}
+  set output_pins {}
   foreach inst_ITerm $inst_ITerms {
     set pin_name [get_ITerm_name $inst_ITerm]
     if {[$inst_ITerm isInputSignal]} {
-      if {[info exists input_pin]} {
-        unset input_pin
-      }
-      set input_pin [get_pin $pin_name]
+      lappend input_pins [get_pin $pin_name]
     }
+  }
+  foreach inst_ITerm $inst_ITerms {
+    set pin_name [get_ITerm_name $inst_ITerm]
     if {[$inst_ITerm isOutputSignal]} {
-      if {[info exists output_pin]} {
-         unset output_pin
-      }
-      set output_pin [get_pin $pin_name]
-      ::sta::connect_pin $tmp_out_net $output_pin
+      lappend output_pins [get_pin $pin_name]
     }
+  }
+  foreach output_pin $output_pins {
+    ::sta::connect_pin $tmp_out_net $output_pin
   }
 
   set fix_load_inst_pins {}
@@ -259,6 +259,7 @@ proc get_fix_load_delay {libcell_name corner fix_load_insts} {
         set fix_load_inst_pin_name [get_ITerm_name $fix_load_inst_ITerm]
         set fix_load_inst_pin [get_pin $fix_load_inst_pin_name]
         lappend fix_load_inst_pins $fix_load_inst_pin
+        break
       }
     }
   }
@@ -268,21 +269,25 @@ proc get_fix_load_delay {libcell_name corner fix_load_insts} {
   }
 
   set fix_load_delays {}
-  if {[info exist input_pin] && [info exist output_pin]} {
-    foreach from_vertex [$input_pin vertices] {
-      foreach to_vertex [$output_pin vertices] {
-        set iter [$from_vertex out_edge_iterator]
-        while {[$iter has_next]} {
-          set edge [$iter next]
-          if { [$edge to] == $to_vertex } {
-            set arc_delays_ [get_arc_delay $edge $corner]
-            lappend fix_load_delays $arc_delays_
+  if {[info exist input_pins] && [info exist output_pins]} {
+    foreach input_pin $input_pins {
+      foreach output_pin $output_pins {
+        foreach from_vertex [$input_pin vertices] {
+          foreach to_vertex [$output_pin vertices] {
+            set iter [$from_vertex out_edge_iterator]
+            while {[$iter has_next]} {
+              set edge [$iter next]
+              if { [$edge to] == $to_vertex } {
+                set arc_delays_ [get_arc_delay $edge $corner]
+                lappend fix_load_delays $arc_delays_
+              }
+            }
+            $iter finish
           }
         }
-        $iter finish
       }
     }
-    unset input_pin
+    unset input_pins
   }
   set fix_load_delay -1
   if {[llength $fix_load_delays] > 0} {
@@ -299,10 +304,7 @@ proc get_fix_load_delay {libcell_name corner fix_load_insts} {
   foreach fix_load_inst_pin $fix_load_inst_pins {
     ::sta::disconnect_pin $tmp_out_net $fix_load_inst_pin
   }
-  if {[info exist output_pin]} {
-    ::sta::disconnect_pin $tmp_out_net $output_pin
-    unset output_pin
-  }
+  unset output_pins
   ::sta::delete_net $tmp_out_net
   ::sta::delete_instance $tmp_inst
   return $fix_load_delay      
@@ -316,24 +318,25 @@ proc get_fo4_delay {libcell_name corner} {
   
   set tmp_out_net [::sta::make_net tmp_out_net]
   
+  set input_pins {}
+  set output_pins {}
   set inst_ITerms [$tmp_db_inst getITerms]
   foreach inst_ITerm $inst_ITerms {
     set pin_name [get_ITerm_name $inst_ITerm]
     if {[$inst_ITerm isInputSignal]} {
-      if {[info exists input_pin]} {
-        unset input_pin
-      }
-      set input_pin [get_pin $pin_name]
-    }
-    if {[$inst_ITerm isOutputSignal]} {
-      if {[info exists output_pin]} {
-        unset output_pin
-      }
-      set output_pin [get_pin $pin_name]
-      ::sta::connect_pin $tmp_out_net $output_pin
+      lappend input_pins [get_pin $pin_name]
     }
   }
-  
+  foreach inst_ITerm $inst_ITerms {
+    set pin_name [get_ITerm_name $inst_ITerm]
+    if {[$inst_ITerm isOutputSignal]} {
+      lappend output_pins [get_pin $pin_name]
+    }
+  }
+  foreach output_pin $output_pins {
+    ::sta::connect_pin $tmp_out_net $output_pin
+  }
+
   set fo4_load_insts {}
   for {set i 0} {$i < 4} {incr i} {
     set fo4_load_ref_inv_inst [::sta::make_instance tmp_inst$i$i $libcell]
@@ -348,6 +351,7 @@ proc get_fo4_delay {libcell_name corner} {
         set fo4_load_inst_pin_name [get_ITerm_name $fo4_load_inst_ITerm]
         set fo4_load_inst_pin [get_pin $fo4_load_inst_pin_name]
         lappend fo4_load_inst_pins $fo4_load_inst_pin
+        break
       }
     }
   }
@@ -356,22 +360,25 @@ proc get_fo4_delay {libcell_name corner} {
   }
 
   set fo4_delays {}
-  if {[info exist input_pin] && [info exist output_pin]} {
-    foreach from_vertex [$input_pin vertices] {
-      foreach to_vertex [$output_pin vertices] {
-        set iter [$from_vertex out_edge_iterator]
-        while {[$iter has_next]} {
-          set edge [$iter next]
-          if { [$edge to] == $to_vertex } {
-            set arc_delays_ [get_arc_delay $edge $corner]
-            lappend fo4_delays $arc_delays_
+  if {[info exist input_pins] && [info exist output_pins]} {
+    foreach input_pin $input_pins {
+      foreach output_pin $output_pins {
+        foreach from_vertex [$input_pin vertices] {
+          foreach to_vertex [$output_pin vertices] {
+            set iter [$from_vertex out_edge_iterator]
+            while {[$iter has_next]} {
+              set edge [$iter next]
+              if { [$edge to] == $to_vertex } {
+                set arc_delays_ [get_arc_delay $edge $corner]
+                lappend fo4_delays $arc_delays_
+              }
+            }
+            $iter finish
           }
         }
-        $iter finish
       }
     }
-    unset input_pin
-    #unset output_pin
+    unset input_pins
   }
   set fo4_delay -1
   if {[llength $fo4_delays] > 0} {
@@ -385,31 +392,14 @@ proc get_fo4_delay {libcell_name corner} {
     set fo4_delay None
   }
   
-  foreach fo4_load_inst_pin $fo4_load_inst_pins {
-    ::sta::disconnect_pin $tmp_out_net $fo4_load_inst_pin
-  }
   foreach fo4_load_inst $fo4_load_insts {
     ::sta::delete_instance $fo4_load_inst
   }
-  if {[info exist output_pin]} {
-    ::sta::disconnect_pin $tmp_out_net $output_pin
-    unset output_pin
-  }
+  unset output_pins
   ::sta::delete_net $tmp_out_net
   ::sta::delete_instance $tmp_inst
   unset fo4_load_insts
   return $fo4_delay
-}
-
-proc pin_in_list {name pin_list} {
-  set result 0
-  foreach pt $pin_list {
-    if {$pt == $name} {
-      set result 1
-      break
-    }
-  }
-  return $result
 }
 
 proc get_pin_x {ITerm} {
@@ -459,10 +449,8 @@ proc get_pin_num_reachable_endpoint {pin_ITerm end_points} {
   set num_reachable_endpoint 0
   foreach pin_net_ITerm $pin_net_ITerms {
     set tmp_pin_name [get_ITerm_name $pin_net_ITerm]
-    foreach edpt $end_points {
-      if {$edpt == $tmp_pin_name} {
-        set num_reachable_endpoint [expr {$num_reachable_endpoint + 1}]
-      }
+    if {[dict exists $end_points $tmp_pin_name]} {
+      set num_reachable_endpoint [expr {$num_reachable_endpoint + 1}]
     }
   }
   return $num_reachable_endpoint
@@ -668,4 +656,5 @@ proc print_libcell_property_entry {outfile libcell_props} {
   lappend libcell_entry [dict get $libcell_props "fix_load_delay"];#libcell_delay_fixed_load
   puts $outfile [join $libcell_entry ","]
 }
+
 

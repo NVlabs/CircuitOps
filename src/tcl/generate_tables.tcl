@@ -53,7 +53,6 @@ set clk_nets [::sta::find_all_clk_nets]
 #get startpoints & endpoints from OpenSTA#
 ##########################################
 set startpoints [::sta::startpoints]
-set start_points {}
 foreach startpoint $startpoints {
   set start_point_pin [::sta::sta_to_db_pin $startpoint]
   if { $start_point_pin == "NULL" } {
@@ -61,11 +60,10 @@ foreach startpoint $startpoints {
   }
   set start_point_inst_name [[$start_point_pin getInst] getName]
   set start_point_mterm_name [[$start_point_pin getMTerm] getName]
-  lappend start_points "${start_point_inst_name}/${start_point_mterm_name}"
+  dict set start_points "${start_point_inst_name}/${start_point_mterm_name}" 1
 }
 
 set endpoints [::sta::endpoints]
-set end_points {}
 foreach endpoint $endpoints {
   set end_point_pin [::sta::sta_to_db_pin $endpoint]
   if { $end_point_pin == "NULL" } {
@@ -73,9 +71,8 @@ foreach endpoint $endpoints {
   }
   set end_point_inst_name [[$end_point_pin getInst] getName]
   set end_point_mterm_name [[$end_point_pin getMTerm] getName]
-  lappend end_points "${end_point_inst_name}/${end_point_mterm_name}"
+  dict set end_points "${end_point_inst_name}/${end_point_mterm_name}" 1
 }
-
 ###########################
 #get default design corner#
 ###########################
@@ -109,6 +106,8 @@ foreach inst $insts {
   
   set cell_is_in_clk 0
   set inst_ITerms [$inst getITerms]
+  set input_pins {}
+  set output_pins {}
   ######################
   #iterate through pins#
   ######################
@@ -140,8 +139,8 @@ foreach inst $insts {
       dict set pin_dict is_in_clk $is_in_clk
       dict set pin_dict dir [$ITerm isOutputSignal]
       dict set pin_dict pin_slack [get_property [get_pins $pin_name] "slack_max"]
-      dict set pin_dict is_startpoint [pin_in_list $pin_name $start_points]
-      dict set pin_dict is_endpoint [pin_in_list $pin_name $end_points]
+      dict set pin_dict is_startpoint [dict exists $start_points $pin_name]
+      dict set pin_dict is_endpoint [dict exists $end_points $pin_name]
       dict set pin_dict maxtran [::sta::max_slew_check_limit]
       dict set pin_dict num_reachable_endpoint $num_reachable_endpoint
       dict set pin_dict x [get_pin_x $ITerm]
@@ -156,8 +155,6 @@ foreach inst $insts {
     #################################################
     #build cell-pin edge table & cell-net edge table#
     #################################################
-    set input_pins {}
-    set output_pins {}
     if {[$ITerm isInputSignal]} {
       puts $cell_pin_outfile "${pin_name},${cell_name},pin,cell"
       puts $cell_net_outfile "${pin_net_name},${cell_name},net,cell"
@@ -202,43 +199,48 @@ puts $net_pin_outfile "src,tar,src_type,tar_type"
 ######################
 foreach net $nets {
   set net_name [$net getName]
-  set total_cap [::sta::Net_capacitance [get_net $net_name] $corner max]
-  set net_ITerms [$net getITerms]
+  if {!([::sta::Net_is_power [get_net $net_name]] || [::sta::Net_is_ground [get_net $net_name]])} {
+    set total_cap [::sta::Net_capacitance [get_net $net_name] $corner max]
+    set net_ITerms [$net getITerms]
 
-  dict set net_dict net_name $net_name
-  dict set net_dict net_cap [[get_net $net_name] wire_capacitance $corner max]
-  dict set net_dict net_res [$net getTotalResistance]
-  dict set net_dict net_coupling [$net getTotalCouplingCap]
-  
-  set input_pins {}
-  set output_pins {}
-  set input_cells {}
-  set output_cells {}
-  ##########################
-  #build net-pin edge table#
-  ##########################
-  set net_ITerms [$net getITerms]
-  foreach ITerm $net_ITerms {
-    set ITerm_name [get_ITerm_name $ITerm]
-    set cell_ITerm_name [[$ITerm getInst] getName]
-    if {[$ITerm isInputSignal]} {
-      puts $net_pin_outfile "${net_name},${ITerm_name},net,pin"
-      lappend output_pins $ITerm_name;
-      lappend output_cells $cell_ITerm_name;
-    } elseif {[$ITerm isOutputSignal]} {
-      puts $net_pin_outfile "${ITerm_name},${net_name},pin,net"
-      lappend input_pins $ITerm_name;
-      lappend input_cells $cell_ITerm_name;
+    dict set net_dict net_name $net_name
+    dict set net_dict net_cap [[get_net $net_name] wire_capacitance $corner max]
+    dict set net_dict net_res [$net getTotalResistance]
+    dict set net_dict net_coupling [$net getTotalCouplingCap]
+    
+    set input_pins {}
+    set output_pins {}
+    set input_cells {}
+    set output_cells {}
+    ##########################
+    #build net-pin edge table#
+    ##########################
+    set net_ITerms [$net getITerms]
+    foreach ITerm $net_ITerms {
+      set ITerm_name [get_ITerm_name $ITerm]
+      set cell_ITerm_name [[$ITerm getInst] getName]
+      if {[$ITerm isInputSignal]} {
+        puts $net_pin_outfile "${net_name},${ITerm_name},net,pin"
+        lappend output_pins $ITerm_name;
+        lappend output_cells $cell_ITerm_name;
+      } elseif {[$ITerm isOutputSignal]} {
+        puts $net_pin_outfile "${ITerm_name},${net_name},pin,net"
+        lappend input_pins $ITerm_name;
+        lappend input_cells $cell_ITerm_name;
+      }
     }
+
+    dict set net_dict fanout [llength $output_pins] 
+    dict set net_dict total_cap $total_cap
+    dict set net_dict net_route_length [get_net_route_length $net]
+    print_net_property_entry $net_outfile $net_dict
+    #################################################
+    #build pin-pin edge table & cell-cell edge table#
+    #################################################
+    print_ip_op_pairs $pin_pin_outfile $input_pins $output_pins 1 $corner
+    print_ip_op_cell_pairs $cell_cell_outfile $input_cells $output_cells
+
   }
-
-  print_ip_op_cell_pairs $cell_cell_outfile $input_cells $output_cells
-  print_ip_op_pairs $pin_pin_outfile $input_pins $output_pins 1 $corner
-  dict set net_dict fanout [llength $output_pins] 
-  dict set net_dict total_cap $total_cap
-  dict set net_dict net_route_length [get_net_route_length $net]
-  print_net_property_entry $net_outfile $net_dict
-
 }
 
 close $net_outfile
@@ -246,7 +248,6 @@ close $net_pin_outfile
 close $pin_pin_outfile
 close $cell_cell_outfile
 
-#libcell table
 set libcell_outfile [open $libcell_file w]
 set header {libcell_name func_id libcell_area worst_input_cap libcell_leakage fo4_delay libcell_delay_fixed_load}
 puts $libcell_outfile [join $header ","]
