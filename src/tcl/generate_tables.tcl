@@ -78,6 +78,11 @@ foreach endpoint $endpoints {
 ###########################
 set corner [::sta::cmd_corner]
 
+
+set seq_cells [::sta::all_register]
+foreach seq_cell $seq_cells {
+  dict set seq_cell_dict $seq_cell 1
+}
 ############################################
 #iterate through each instance and its pins#
 #for the properties                        #
@@ -99,8 +104,9 @@ foreach inst $insts {
   dict set cell_dict is_inv [get_property [get_lib_cells $master_name] is_inverter]
   dict set cell_dict is_buf [get_property [get_lib_cells $master_name] is_buffer]
   
-  set is_seq [expr [string first "DFF" $master_name] != -1]
+  set is_seq [dict exists $seq_cell_dict [get_cells $cell_name]]
   set is_macro [$master_cell isBlock];
+  
   dict set cell_dict is_seq $is_seq
   dict set cell_dict is_macro $is_macro
   
