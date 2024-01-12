@@ -694,7 +694,7 @@ def get_tables_OpenROAD_API(data_root, write_table, return_df):
         _CircuitOps_Tables.append_ip_op_pairs(input_pins, output_pins, 1)
 
   if write_table:
-    header = "libcell_name,func_id,libcell_area,worst_input_cap,libcell_leakage,fo4_delay,libcell_delay_fixed_load"
+    header = "libcell_name,func_id,libcell_area,worst_input_cap,libcell_leakage,fo4_delay,fix_load_delay"
     with open(_CircuitOps_File_DIR.libcell_file, "w") as file:
       file.write(header + "\n")
 
@@ -727,6 +727,7 @@ def get_tables_OpenROAD_API(data_root, write_table, return_df):
 
 
   return _CircuitOps_Tables.get_IR_tables() if return_df else None
+
 
 
 
