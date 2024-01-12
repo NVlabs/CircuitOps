@@ -40,7 +40,7 @@ cell_cnt_th = 20
 def BT_sampling(data_root):
     g, pin_df, cell_df, net_df, fo4_df, pin_pin_df, cell_pin_df, \
         net_pin_df, net_cell_df, cell_cell_df, edge_df, v_type, e_type \
-        = generate_LPG_from_tables(data_root)
+        = generate_LPG_from_tables(data_root = data_root)
 
     ### get dimensions
     N_pin, _ = pin_df.shape

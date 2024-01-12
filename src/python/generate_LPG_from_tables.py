@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 import pandas as pd
 import numpy as np
 from graph_tool.all import *
@@ -28,9 +26,21 @@ from helper import (
     generate_edge_df_OpenROAD,
 )
 
-def generate_LPG_from_tables(data_root):
-    pin_df, cell_df, net_df, pin_pin_df, cell_pin_df, net_pin_df, net_cell_df, cell_cell_df, fo4_df = read_tables_OpenROAD(data_root)
-
+def generate_LPG_from_tables(data_root = None, use_python_api = False, write_table = False):
+    if not use_python_api:
+      pin_df, cell_df, net_df, pin_pin_df, cell_pin_df, net_pin_df, net_cell_df, cell_cell_df, fo4_df = read_tables_OpenROAD(data_root)
+    else:
+      from openroad_helpers import get_tables_OpenROAD_API
+      circuit_df = get_tables_OpenROAD_API(data_root = data_root, write_table = write_table, return_df = use_python_api)
+      pin_df = circuit_df["pin_properties"]
+      cell_df = circuit_df["cell_properties"]
+      net_df = circuit_df["net_properties"]
+      pin_pin_df = circuit_df["pin_pin_edge"]
+      cell_pin_df = circuit_df["cell_pin_edge"]
+      net_pin_df = circuit_df["net_pin_edge"]
+      net_cell_df = circuit_df["cell_net_edge"]
+      cell_cell_df = circuit_df["cell_cell_edge"]
+      fo4_df = circuit_df["libcell_properties"]
     #### rename dfs
     pin_df = pin_df.rename(columns={"pin_name":"name", "cell_name":"cellname", "net_name":"netname", \
                                     "pin_tran":"tran", "pin_slack":"slack", "pin_rise_arr":"risearr", \
@@ -123,24 +133,24 @@ def generate_LPG_from_tables(data_root):
     fo4_df["size_cnt"] = 0
     class_cnt = 50
     for i in range(fo4_df.group_id.min(), fo4_df.group_id.max()+1):
-        temp = fo4_df.loc[fo4_df.group_id==i, ["group_id", "libcell_delay_fixed_load"]]
-        temp = temp.sort_values(by=['libcell_delay_fixed_load'], ascending=False)
+        temp = fo4_df.loc[fo4_df.group_id==i, ["group_id", "fix_load_delay"]]
+        temp = temp.sort_values(by=['fix_load_delay'], ascending=False)
         fo4_df.loc[temp.index, ["size_class"]] = range(len(temp))
         fo4_df.loc[temp.index, ["size_cnt"]] = len(temp)
     
         temp["size_cnt"] = 0
-        MIN = temp.libcell_delay_fixed_load.min()
-        MAX = temp.libcell_delay_fixed_load.max()
+        MIN = temp.fix_load_delay.min()
+        MAX = temp.fix_load_delay.max()
         interval = (MAX-MIN)/class_cnt
         for j in range(1, class_cnt):
             delay_h = MAX - j*interval
             delay_l = MAX - (j+1)*interval
             if j == (class_cnt-1):
                 delay_l = MIN
-            temp.loc[(temp.libcell_delay_fixed_load < delay_h) & (temp.libcell_delay_fixed_load >= delay_l), ["size_cnt"]] = j
+            temp.loc[(temp.fix_load_delay < delay_h) & (temp.fix_load_delay >= delay_l), ["size_cnt"]] = j
         fo4_df.loc[temp.index, ["size_class2"]] = temp["size_cnt"]
     
-    cell_fo4 = fo4_df.loc[:,["ref", "fo4_delay", "libcell_delay_fixed_load",  "group_id", "libcell_id", "size_class", "size_class2", "size_cnt"]]
+    cell_fo4 = fo4_df.loc[:,["ref", "fo4_delay", "fix_load_delay",  "group_id", "libcell_id", "size_class", "size_class2", "size_cnt"]]
     cell_df = cell_df.merge(cell_fo4, on="ref", how="left")
     cell_df["libcell_id"] = cell_df["libcell_id"].fillna(-1)
 
@@ -202,7 +212,7 @@ def generate_LPG_from_tables(data_root):
     v_dynamicpower = g.new_vp("float")
     
     v_fo4_delay = g.new_vp("float")
-    v_libcell_delay_fixed_load = g.new_vp("float")
+    v_fix_load_delay = g.new_vp("float")
     v_group_id = g.new_ep("int")
     v_libcell_id = g.new_ep("int")
     v_size_class = g.new_ep("int")
@@ -225,7 +235,7 @@ def generate_LPG_from_tables(data_root):
     v_y.a[N_pin:N_pin+N_cell] = cell_df["y"].to_numpy()
     
     v_fo4_delay.a[N_pin:N_pin+N_cell] = cell_df["fo4_delay"].to_numpy()
-    v_libcell_delay_fixed_load.a[N_pin:N_pin+N_cell] = cell_df["libcell_delay_fixed_load"].to_numpy()
+    v_fix_load_delay.a[N_pin:N_pin+N_cell] = cell_df["fix_load_delay"].to_numpy()
     v_group_id.a[N_pin:N_pin+N_cell] = cell_df["group_id"].to_numpy()
     v_libcell_id.a[N_pin:N_pin+N_cell] = cell_df["libcell_id"].to_numpy()
     v_size_class.a[N_pin:N_pin+N_cell] = cell_df["size_class"].to_numpy()

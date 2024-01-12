@@ -94,13 +94,7 @@ def read_tables_OpenROAD(data_root, design=None):
 
     # all_fo4_delay_path = data_root + "all_fo4_delay_new.txt"
 
-    #############
-    ##add by BY##
-    #############
     cell_cell_path = data_root + "cell_cell_edge.csv"
-    #############
-
-
     cell_pin_path = data_root  + "cell_pin_edge.csv"
     cell_path = data_root  + "cell_properties.csv"
     net_pin_path = data_root  +  "net_pin_edge.csv"
@@ -112,19 +106,12 @@ def read_tables_OpenROAD(data_root, design=None):
     all_fo4_delay_path = data_root + "libcell_properties.csv"
 
     ### load tables
-    # fo4_df = pd.read_table(all_fo4_delay_path, sep=',')
     fo4_df = pd.read_csv(all_fo4_delay_path)
 
     pin_df = pd.read_csv(pin_path)
     cell_df = pd.read_csv(cell_path)
     net_df = pd.read_csv(net_path)
-
-    #############
-    ##add by BY##
-    #############
     cell_cell_df = pd.read_csv(cell_cell_path)
-    #############
-
     pin_pin_df = pd.read_csv(pin_pin_path)
     cell_pin_df = pd.read_csv(cell_pin_path)
     net_pin_df = pd.read_csv(net_pin_path)
@@ -138,12 +125,7 @@ def read_tables_OpenROAD(data_root, design=None):
     print("cell_edge_df.shape: ", cell_pin_df.shape)
     print("net_edge_df.shape: ", net_pin_df.shape)
     print("net_cell_edge_df.shape: ", net_cell_df.shape)
-
-    #############
-    ##add by BY##
-    #############
     print("cell_cell_edge_df.shape: ", cell_cell_df.shape)
-    #############
 
     return pin_df, cell_df, net_df, pin_pin_df, cell_pin_df, net_pin_df, net_cell_df, cell_cell_df, fo4_df
 

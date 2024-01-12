@@ -15,7 +15,7 @@
 
 import os
 import pdn, odb, utl
-from openroad import Tech, Design
+from openroad import Tech, Design, Timing
 import openroad as ord
 import pandas as pd
 from collections import defaultdict
@@ -71,7 +71,7 @@ class CircuitOps_Tables:
 
     self.net_properties = {"net_name": [],
                           "net_route_length": [],
-                          "net_steiner_length": [],
+                          #"net_steiner_length": [],
                           "fanout": [],
                           "total_cap": [],
                           "net_cap": [],
@@ -272,7 +272,7 @@ class CircuitOps_Tables:
     
 
 class CircuitOps_File_DIR:
-  def __init__(self):
+  def __init__(self, CircuitOps_dir):
     ### SET DESIGN ###
     self.DESIGN_NAME = "gcd"
     #self.DESIGN_NAME = "aes"
@@ -282,12 +282,8 @@ class CircuitOps_File_DIR:
     ### SET PLATFORM ###
     self.PLATFORM = "nangate45"
 
-    ### SET OUTPUT DIRECTORY ###
-    self.OUTPUT_DIR = "./IRs/" + self.PLATFORM + "/" + self.DESIGN_NAME
-    self.create_path()
-
     ### INTERNAL DEFINTIONS: DO NOT MODIFY BELOW ####
-    self.CIRCUIT_OPS_DIR = "./"
+    self.CIRCUIT_OPS_DIR = CircuitOps_dir
     self.DESIGN_DIR = self.CIRCUIT_OPS_DIR + "/designs/" + self.PLATFORM + "/" + self.DESIGN_NAME
     self.PLATFORM_DIR = self.CIRCUIT_OPS_DIR + "/platforms/" + self.PLATFORM
     
@@ -298,6 +294,10 @@ class CircuitOps_File_DIR:
     self.SDC_FILE = self.DESIGN_DIR + "/6_final.sdc.gz"
     self.NETLIST_FILE = self.DESIGN_DIR + "/6_final.v"
     self.SPEF_FILE = self.DESIGN_DIR + "/6_final.spef.gz"
+
+    ### SET OUTPUT DIRECTORY ###
+    self.OUTPUT_DIR = self.CIRCUIT_OPS_DIR + "/IRs/" + self.PLATFORM + "/" + self.DESIGN_NAME
+    self.create_path()
 
     self.cell_file = self.OUTPUT_DIR + "/cell_properties.csv"
     self.libcell_file = self.OUTPUT_DIR + "/libcell_properties.csv"
@@ -344,7 +344,6 @@ def add_global_connection(design, *,
     net.setSpecial()
     net.setSigType("GROUND")
 
-  # region = None
   if region is not None:
     region = design.getBlock().findRegion(region)
     if region is None:
@@ -355,7 +354,6 @@ def add_global_connection(design, *,
 
 def load_design(_CircuitOps_File_DIR):
   tech = Tech()
-  tech_design = ord.Tech()
   for libFile in _CircuitOps_File_DIR.LIB_FILES:  
     tech.readLiberty(libFile)
   for techFile in _CircuitOps_File_DIR.TECH_LEF_FILE:
@@ -371,7 +369,7 @@ def load_design(_CircuitOps_File_DIR):
   add_global_connection(design, net_name="VDD", pin_pattern="VDD", power=True)
   add_global_connection(design, net_name="VSS", pin_pattern="VSS", ground=True)
   odb.dbBlock.globalConnect(ord.get_db_block())
-  return tech_design, design
+  return tech, design
 
 def print_cell_property_entry(outfile, cell_props):
   cell_entry = []
@@ -431,24 +429,6 @@ def print_ip_op_pairs(outfile, input_pins, output_pins, is_net):
         file.write("{},{},{},{},{},{}\n".format(i_p_, o_p_, "pin", "pin", is_net, -1))#arc_delays[count]))
         count += 1
 
-def get_net_route_length(net):
-  net_route_length = 0
-  net_name = net.getName()
-  wires = [net.getWire()]
-  
-  swire = net.getSWires()
-  if (len(swire) != 0):
-    wires = swire[0].getWires()
-
-  for wire in wires:
-    if wire == None:
-      continue
-    else:
-      wire_length = wire.getLength()
-      net_route_length = net_route_length + wire_length
-
-  return net_route_length
-
 def print_net_property_entry(outfile, net_props):
   net_entry = []
   net_entry.append(net_props["net_name"])#net_name
@@ -476,28 +456,6 @@ def print_libcell_property_entry(outfile, libcell_props):
   with open(outfile, "a") as file:
     file.write(final + "\n")
 
-def Pin_X(ITerm):
-  pin_x, count = 0, 0
-  pin_geometries = ITerm.getGeometries()
-  for pin_geometry in pin_geometries:
-    tmp_pin_x = pin_geometry.xMin() + pin_geometry.xMax()
-    tmp_pin_x = tmp_pin_x /2
-    count = count + 1
-    pin_x = pin_x + tmp_pin_x
-  pin_x = pin_x / count
-  return pin_x
-
-def Pin_Y(ITerm):
-  pin_y, count = 0, 0
-  pin_geometries = ITerm.getGeometries()
-  for pin_geometry in pin_geometries:
-    tmp_pin_y = pin_geometry.yMin() + pin_geometry.yMax()
-    tmp_pin_y = tmp_pin_y /2
-    count = count + 1
-    pin_y = pin_y + tmp_pin_y
-  pin_y = pin_y / count
-  return pin_y
-
 def Pin_Num_Reachable_Endpoint(ITerm, timing):
   tmp_net = ITerm.getNet()
   tmp_ITerms = tmp_net.getITerms()
@@ -507,7 +465,268 @@ def Pin_Num_Reachable_Endpoint(ITerm, timing):
       num += 1
   return num
 
+def get_tables_OpenROAD_API(data_root, write_table, return_df):
+  _CircuitOps_File_DIR = CircuitOps_File_DIR(data_root)
+  tech_design, design = load_design(_CircuitOps_File_DIR)
+  timing = Timing(design)
 
+  db = ord.get_db()
+  chip = db.getChip()
+  block = ord.get_db_block()
+  tech = ord.get_db_tech()
+  insts = block.getInsts()
+  nets = block.getNets()
+  ###########################
+  #get default design corner#
+  ###########################
+  corner = timing.getCorners()[0]
+
+  if write_table:
+    header = "cell_name,is_seq,is_macro,is_in_clk,x0,y0,x1,y1,is_buf,is_inv,libcell_name,cell_static_power,cell_dynamic_power"
+    with open(_CircuitOps_File_DIR.cell_file, "w") as file:
+      file.write(header + "\n")
+
+    header = "pin_name,x,y,is_in_clk,is_port,is_startpoint,is_endpoint,dir,maxcap,maxtran,num_reachable_endpoint,cell_name,net_name,pin_tran,pin_slack,pin_rise_arr,pin_fall_arr,input_pin_cap"
+    with open(_CircuitOps_File_DIR.pin_file, "w") as file:
+      file.write(header + "\n")
+
+    with open(_CircuitOps_File_DIR.cell_pin_file, "w") as file:
+      file.write("src,tar,src_type,tar_type\n")
+    with open(_CircuitOps_File_DIR.cell_net_file, "w") as file:
+      file.write("src,tar,src_type,tar_type\n")
+    with open(_CircuitOps_File_DIR.pin_pin_file, "w") as file:
+      file.write("src,tar,src_type,tar_type,is_net,arc_delay\n")
+    with open(_CircuitOps_File_DIR.cell_cell_file, "w") as file:
+      file.write("src,tar,src_type,tar_type\n")
+
+  _CircuitOps_Tables = CircuitOps_Tables()
+
+  print(" NUMBER OF INSTANCES [" + str(len(insts)) + "]")
+
+  ############################################
+  #iterate through each instance and its pins#
+  #for the properties                        #
+  ############################################
+  block = ord.get_db_block()
+  insts = block.getInsts()
+  for inst in insts:
+    cell_dict = defaultdict()
+    cell_name = inst.getName()
+    cell_dict["cell_name"] = cell_name
+
+    # cell properties
+    #location
+    BBox = inst.getBBox()
+    cell_dict["x0"] = BBox.xMin()
+    cell_dict["y0"] = BBox.yMin()
+    cell_dict["x1"] = BBox.xMax()
+    cell_dict["y1"] = BBox.yMax()
+
+    master_cell = inst.getMaster()
+    master_name = master_cell.getName()
+    cell_dict["libcell_name"] = master_name
+    is_seq = 1 if ("DFF" in master_name) else 0
+    cell_dict["is_seq"] = is_seq
+    is_macro = 1 if master_cell.isBlock() else 0
+    cell_dict["is_macro"] = is_macro
+    cell_dict["is_buf"] = 1 if design.isBuffer(master_cell) else 0
+    cell_dict["is_inv"] = 1 if design.isInverter(master_cell) else 0
+    cell_dict["is_in_clk"] = 1 if design.isInClock(inst) else 0
+    cell_static_power = timing.staticPower(inst, corner)
+    cell_dict["cell_static_power"] = cell_static_power
+    cell_dynamic_power = timing.dynamicPower(inst, corner)
+    cell_dict["cell_dynamic_power"] = cell_dynamic_power
+  
+    if write_table:
+      print_cell_property_entry(_CircuitOps_File_DIR.cell_file, cell_dict)
+    if return_df:
+      _CircuitOps_Tables.append_cell_property_entry(cell_dict)
+
+    #cell-pin
+    inst_ITerms = inst.getITerms()
+    input_pins = []
+    output_pins = []
+    ######################
+    #iterate through pins#
+    ######################
+    for ITerm in inst_ITerms:
+      #skip VDD/VSS pins
+      if ITerm.getNet().getSigType() != 'POWER' and ITerm.getNet().getSigType() != 'GROUND':
+        #pin_property
+        pin_name = design.getITermName(ITerm)
+        pin_net_name = ITerm.getNet().getName()
+        pin_is_in_clk = 1 if design.isInClock(ITerm.getInst()) else 0
+
+        pin_dict = defaultdict()
+        pin_dict["net_name"] = pin_net_name
+        pin_dict["pin_name"] = pin_name
+        pin_dict["cell_name"] = ITerm.getInst().getName()
+        pin_dict["dir"] = 1 if ITerm.isOutputSignal() else 0
+        pin_dict["is_in_clk"] = pin_is_in_clk
+        PinXY_list = ITerm.getAvgXY()
+        if PinXY_list[0]:
+          pin_dict["x"] = PinXY_list[1]
+          pin_dict["y"] = PinXY_list[2]
+        else:
+          pin_dict["x"] = -1
+          pin_dict["y"] = -1
+        pin_dict["is_endpoint"] = timing.isEndpoint(ITerm)
+        pin_dict["num_reachable_endpoint"] = Pin_Num_Reachable_Endpoint(ITerm, timing)
+        pin_dict["pin_tran"] = timing.getPinSlew(ITerm)
+        pin_dict["pin_slack"] = min(timing.getPinSlack(ITerm, timing.Fall, timing.Max), timing.getPinSlack(ITerm, timing.Rise, timing.Max))
+        pin_dict["pin_rise_arr"] = timing.getPinArrival(ITerm, timing.Rise)
+        pin_dict["pin_fall_arr"] = timing.getPinArrival(ITerm, timing.Fall)
+
+        if ITerm.isInputSignal():
+          pin_dict["input_pin_cap"] = timing.getPortCap(ITerm, corner, timing.Max)
+        else:
+          pin_dict["input_pin_cap"] = -1
+        if write_table:
+          print_pin_property_entry(_CircuitOps_File_DIR.pin_file, pin_dict)
+        if return_df:
+          _CircuitOps_Tables.append_pin_property_entry(pin_dict)
+
+        #################################################
+        #build cell-pin edge table & cell-net edge table#
+        #################################################
+        if ITerm.isInputSignal():
+          if write_table:
+            with open(_CircuitOps_File_DIR.cell_pin_file, "a") as file:
+              file.write("{},{},{},{}\n".format(pin_name, cell_name, "pin", "cell"))
+            with open(_CircuitOps_File_DIR.cell_net_file, "a") as file:
+              file.write("{},{},{},{}\n".format(pin_net_name, cell_name, "net", "cell"))
+          if return_df:
+            _CircuitOps_Tables.append_cell_pin_edge(pin_name, cell_name, True)
+            _CircuitOps_Tables.append_cell_net_edge(pin_net_name, cell_name, True)
+          input_pins.append(pin_name)
+        elif ITerm.isOutputSignal():
+          if write_table:
+            with open(_CircuitOps_File_DIR.cell_pin_file, "a") as file:
+              file.write("{},{},{},{}\n".format(cell_name, pin_name, "cell", "pin"))
+            with open(_CircuitOps_File_DIR.cell_net_file, "a") as file:
+              file.write("{},{},{},{}\n".format(cell_name, pin_net_name, "cell", "net"))
+          if return_df:
+            _CircuitOps_Tables.append_cell_pin_edge(cell_name, pin_name, False)
+            _CircuitOps_Tables.append_cell_net_edge(cell_name, pin_net_name, False)
+          output_pins.append(pin_name)
+    ##########################
+    #build pin-pin edge table#
+    ##########################
+    if (is_macro == 0 and is_seq == 0):
+      if write_table:
+        print_ip_op_pairs(_CircuitOps_File_DIR.pin_pin_file, input_pins, output_pins, 0)
+      if return_df:
+        _CircuitOps_Tables.append_ip_op_pairs(input_pins, output_pins, 0)
+
+  if write_table:
+    header = "net_name,net_route_length,net_steiner_length,fanout,total_cap,net_cap,net_coupling,net_res"
+    with open(_CircuitOps_File_DIR.net_file, "w") as file:
+      file.write(header + "\n")
+
+    with open(_CircuitOps_File_DIR.net_pin_file, "w") as file:
+      file.write("src,tar,src_type,tar_type\n")
+
+  ######################
+  #iterate through nets#
+  ######################
+  for net in nets:
+    if net.getSigType() != 'POWER' and net.getSigType() != 'GROUND':
+      net_name = net.getName()
+      num_reachable_endpoint = 0
+      net_ITerms = net.getITerms()
+
+      net_dict = defaultdict()
+      net_cap = net.getTotalCapacitance()
+      net_res = net.getTotalResistance()
+      net_coupling = net.getTotalCouplingCap()
+
+      total_cap = timing.getNetCap(net, corner, timing.Max)
+
+      input_pins = []
+      output_pins = []
+      input_cells = []
+      output_cells = []
+      ##########################
+      #build net-pin edge table#
+      ##########################
+      net_ITerms = net.getITerms()
+      for ITerm in net_ITerms:
+        ITerm_name = design.getITermName(ITerm)
+        cell_ITerm_name = ITerm.getInst().getName()
+        if (ITerm.isInputSignal()):
+          if write_table:
+            with open(_CircuitOps_File_DIR.net_pin_file, "a") as file:
+              file.write("{},{},{},{}\n".format(net_name, ITerm_name, "net", "pin"))
+          if return_df:
+            _CircuitOps_Tables.append_net_pin_edge(net_name, ITerm_name, True)
+          output_pins.append(ITerm_name)
+          output_cells.append(cell_ITerm_name)
+        elif (ITerm.isOutputSignal):
+          if write_table:
+            with open(_CircuitOps_File_DIR.net_pin_file, "a") as file:
+              file.write("{},{},{},{}\n".format(ITerm_name, net_name, "pin", "net"))
+          if return_df:
+            _CircuitOps_Tables.append_net_pin_edge(ITerm_name, net_name, False)
+          input_pins.append(ITerm_name)
+          input_cells.append(cell_ITerm_name)
+
+      net_dict["net_name"] = net_name
+      net_dict["net_cap"] = net_cap
+      net_dict["net_res"] = net_res
+      net_dict["net_coupling"] = net_coupling
+      net_dict["fanout"] = len(output_pins)
+      net_dict["net_route_length"] = design.getNetRoutedLength(net)
+      net_dict["total_cap"] = total_cap
+
+      if write_table:
+        print_net_property_entry(_CircuitOps_File_DIR.net_file, net_dict)
+      if return_df:
+        _CircuitOps_Tables.append_net_property_entry(net_dict)
+
+      #################################################
+      #build pin-pin edge table & cell-cell edge table#
+      #################################################
+      if write_table:
+        print_ip_op_cell_pairs(_CircuitOps_File_DIR.cell_cell_file, input_cells, output_cells)
+        print_ip_op_pairs(_CircuitOps_File_DIR.pin_pin_file, input_pins, output_pins, 1)
+      if return_df:
+        _CircuitOps_Tables.append_ip_op_cell_pairs(input_cells, output_cells)
+        _CircuitOps_Tables.append_ip_op_pairs(input_pins, output_pins, 1)
+
+  if write_table:
+    header = "libcell_name,func_id,libcell_area,worst_input_cap,libcell_leakage,fo4_delay,libcell_delay_fixed_load"
+    with open(_CircuitOps_File_DIR.libcell_file, "w") as file:
+      file.write(header + "\n")
+
+  libs = db.getLibs()
+
+  libcell_hash_map = defaultdict()
+
+  for lib in libs:
+    lib_name = lib.getName()
+    lib_masters = lib.getMasters()
+    for master in lib_masters:
+      libcell_dict = defaultdict()
+      libcell_name = master.getName()
+      ###########################
+      #filter duplicate libcells#
+      ###########################
+      if libcell_name in libcell_hash_map:
+        continue
+      else:
+        libcell_hash_map[libcell_name] = libcell_name
+      libcell_area = master.getHeight() * master.getWidth()
+
+      libcell_dict["libcell_name"] = libcell_name
+      libcell_dict["libcell_area"] = libcell_area
+
+      if write_table:
+        print_libcell_property_entry(_CircuitOps_File_DIR.libcell_file, libcell_dict)
+      if return_df:
+        _CircuitOps_Tables.append_libcell_property_entry(libcell_dict)
+
+
+  return _CircuitOps_Tables.get_IR_tables() if return_df else None
 
 
 

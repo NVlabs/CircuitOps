@@ -14,10 +14,10 @@
 # limitations under the License.
 
 ### SET DESIGN ###
-#set DESIGN_NAME gcd
+set DESIGN_NAME gcd
 #set DESIGN_NAME aes
 #set DESIGN_NAME bp_fe
-set DESIGN_NAME bp_be
+#set DESIGN_NAME bp_be
 
 ### SET PLATFORM ###
 set PLATFORM nangate45
