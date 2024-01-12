@@ -255,7 +255,7 @@ close $pin_pin_outfile
 close $cell_cell_outfile
 
 set libcell_outfile [open $libcell_file w]
-set header {libcell_name func_id libcell_area worst_input_cap libcell_leakage fo4_delay libcell_delay_fixed_load}
+set header {libcell_name func_id libcell_area worst_input_cap libcell_leakage fo4_delay fix_load_delay}
 puts $libcell_outfile [join $header ","]
 
 set libs [$db getLibs]
