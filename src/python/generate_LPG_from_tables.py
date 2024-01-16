@@ -117,9 +117,8 @@ def generate_LPG_from_tables(data_root = None, use_python_api = False, write_tab
     ### add edge to graph
     e_type = g.new_ep("int")
 
-    print("num of nodes, num of edges: ", g.num_vertices(), g.num_edges())
     g.add_edge_list(edge_df.values.tolist(), eprops=[e_type])
-    print("num of nodes, num of edges: ", g.num_vertices(), g.num_edges())
+    print("num of nodes : %d, num of edges: %d"%(g.num_vertices(), g.num_edges()))
 
     ### add properties to LPG
     ### processing fo4 table

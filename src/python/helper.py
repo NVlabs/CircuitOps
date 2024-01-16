@@ -53,23 +53,10 @@ def read_tables(data_root, design, mcmm):
     net_cell_edge_df = pd.read_csv(net_cell_edge_path)
     cell2cell_edge_df = pd.read_csv(cell2cell_edge_path)
 
-    print("fo4_df shape: ", fo4_df.shape)
-    print("pin_df.shape: ", pin_df.shape)
-    print("cell_df.shape: ", cell_df.shape)
-    print("net_df.shape: ", net_df.shape)
-    print("pin_edge_df.shape: ", pin_edge_df.shape)
-    print("cell_edge_df.shape: ", cell_edge_df.shape)
-    print("net_edge_df.shape: ", net_edge_df.shape)
-    print("net_cell_edge_df.shape: ", net_cell_edge_df.shape)
-    print("cell2cell_edge_df.shape: ", cell2cell_edge_df.shape)
-
     ### load mcmm table
     mcmm_pin_df = pd.read_csv(mcmm_pin_path)
     mcmm_cell_df = pd.read_csv(mcmm_cell_path)
     mcmm_net_df = pd.read_csv(mcmm_net_path)
-    print("mcmm_pin_df.shape: ", mcmm_pin_df.shape)
-    print("mcmm_cell_df.shape: ", mcmm_cell_df.shape)
-    print("mcmm_net_df.shape: ", mcmm_net_df.shape)
 
     ### merge mcmm-independent features and mcmm-depedent features
     pin_df = pin_df.merge(mcmm_pin_df, on="name", how="left")
@@ -116,16 +103,6 @@ def read_tables_OpenROAD(data_root, design=None):
     cell_pin_df = pd.read_csv(cell_pin_path)
     net_pin_df = pd.read_csv(net_pin_path)
     net_cell_df = pd.read_csv(net_cell_path)
-
-    print("fo4_df shape: ", fo4_df.shape)
-    print("pin_df.shape: ", pin_df.shape)
-    print("cell_df.shape: ", cell_df.shape)
-    print("net_df.shape: ", net_df.shape)
-    print("pin_edge_df.shape: ", pin_pin_df.shape)
-    print("cell_edge_df.shape: ", cell_pin_df.shape)
-    print("net_edge_df.shape: ", net_pin_df.shape)
-    print("net_cell_edge_df.shape: ", net_cell_df.shape)
-    print("cell_cell_edge_df.shape: ", cell_cell_df.shape)
 
     return pin_df, cell_df, net_df, pin_pin_df, cell_pin_df, net_pin_df, net_cell_df, cell_cell_df, fo4_df
 
@@ -263,50 +240,30 @@ def generate_edge_df(pin_df, cell_df, net_df, pin_edge_df, cell_edge_df, net_edg
     cell2cell_edge_df = cell2cell_edge_df.merge(tar, on="tar", how="left")
 
     # drop illegal edges
-    print("pin_edge shape: ")
-    print(pin_edge_df.shape)
     idx = pin_edge_df[pd.isna(pin_edge_df.src_id)].index
     pin_edge_df = pin_edge_df.drop(idx)
-    print(pin_edge_df.shape)
     idx = pin_edge_df[pd.isna(pin_edge_df.tar_id)].index
     pin_edge_df = pin_edge_df.drop(idx)
-    print(pin_edge_df.shape)
 
-    print("cell_edge shape: ")
-    print(cell_edge_df.shape)
     idx = cell_edge_df[pd.isna(cell_edge_df.src_id)].index
     cell_edge_df = cell_edge_df.drop(idx)
-    print(cell_edge_df.shape)
     idx = cell_edge_df[pd.isna(cell_edge_df.tar_id)].index
     cell_edge_df = cell_edge_df.drop(idx)
-    print(cell_edge_df.shape)
 
-    print("net_edge shape: ")
-    print(net_edge_df.shape)
     idx = net_edge_df[pd.isna(net_edge_df.src_id)].index
     net_edge_df = net_edge_df.drop(idx)
-    print(net_edge_df.shape)
     idx = net_edge_df[pd.isna(net_edge_df.tar_id)].index
     net_edge_df = net_edge_df.drop(idx)
-    print(net_edge_df.shape)
 
-    print("net_cell_edge shape: ")
-    print(net_cell_edge_df.shape)
     idx = net_cell_edge_df[pd.isna(net_cell_edge_df.src_id)].index
     net_cell_edge_df = net_cell_edge_df.drop(idx)
-    print(net_cell_edge_df.shape)
     idx = net_cell_edge_df[pd.isna(net_cell_edge_df.tar_id)].index
     net_cell_edge_df = net_cell_edge_df.drop(idx)
-    print(net_cell_edge_df.shape)
 
-    print("cell2cell_edge shape: ")
-    print(cell2cell_edge_df.shape)
     idx = cell2cell_edge_df[pd.isna(cell2cell_edge_df.src_id)].index
     cell2cell_edge_df = cell2cell_edge_df.drop(idx)
-    print(cell2cell_edge_df.shape)
     idx = cell2cell_edge_df[pd.isna(cell2cell_edge_df.tar_id)].index
     cell2cell_edge_df = cell2cell_edge_df.drop(idx)
-    print(cell2cell_edge_df.shape)
 
     edge_df = pd.concat([pin_edge_df.loc[:,["src_id", "tar_id"]], cell_edge_df.loc[:,["src_id", "tar_id"]], \
                      net_edge_df.loc[:,["src_id", "tar_id"]], net_cell_edge_df.loc[:,["src_id", "tar_id"]], cell2cell_edge_df.loc[:,["src_id", "tar_id"]]], ignore_index=True)
@@ -337,50 +294,30 @@ def generate_edge_df_OpenROAD(pin_df, cell_df, net_df, pin_pin_df, cell_pin_df, 
     cell_cell_df = cell_cell_df.merge(tar, on="tar", how="left")
 
     # drop illegal edges
-    print("pin_pin shape: ")
-    print(pin_pin_df.shape)
     idx = pin_pin_df[pd.isna(pin_pin_df.src_id)].index
     pin_pin_df = pin_pin_df.drop(idx)
-    print(pin_pin_df.shape)
     idx = pin_pin_df[pd.isna(pin_pin_df.tar_id)].index
     pin_pin_df = pin_pin_df.drop(idx)
-    print(pin_pin_df.shape)
 
-    print("cell_pin shape: ")
-    print(cell_pin_df.shape)
     idx = cell_pin_df[pd.isna(cell_pin_df.src_id)].index
     cell_pin_df = cell_pin_df.drop(idx)
-    print(cell_pin_df.shape)
     idx = cell_pin_df[pd.isna(cell_pin_df.tar_id)].index
     cell_pin_df = cell_pin_df.drop(idx)
-    print(cell_pin_df.shape)
 
-    print("net_pin shape: ")
-    print(net_pin_df.shape)
     idx = net_pin_df[pd.isna(net_pin_df.src_id)].index
     net_pin_df = net_pin_df.drop(idx)
-    print(net_pin_df.shape)
     idx = net_pin_df[pd.isna(net_pin_df.tar_id)].index
     net_pin_df = net_pin_df.drop(idx)
-    print(net_pin_df.shape)
 
-    print("net_cell shape: ")
-    print(net_cell_df.shape)
     idx = net_cell_df[pd.isna(net_cell_df.src_id)].index
     net_cell_df = net_cell_df.drop(idx)
-    print(net_cell_df.shape)
     idx = net_cell_df[pd.isna(net_cell_df.tar_id)].index
     net_cell_df = net_cell_df.drop(idx)
-    print(net_cell_df.shape)
 
-    print("cell_cell shape: ")
-    print(cell_cell_df.shape)
     idx = cell_cell_df[pd.isna(cell_cell_df.src_id)].index    
     cell_cell_df = cell_cell_df.drop(idx)
-    print(cell_cell_df.shape)
     idx = cell_cell_df[pd.isna(cell_cell_df.tar_id)].index
     cell_cell_df = cell_cell_df.drop(idx)
-    print(cell_cell_df.shape)
 
     edge_df = pd.concat([pin_pin_df.loc[:,["src_id", "tar_id"]], cell_pin_df.loc[:,["src_id", "tar_id"]], \
                       net_pin_df.loc[:,["src_id", "tar_id"]], net_cell_df.loc[:,["src_id", "tar_id"]], \
@@ -407,7 +344,6 @@ def get_large_components(hist, th=2000):
     for i in range(len(hist)):
         if hist[i] > th:
             labels.append(i)
-            print(i, hist[i])
     return labels
 
 ### generate subgraph
@@ -416,7 +352,6 @@ def get_subgraph(g_old, v_mask, e_mask):
     print("connected component graph: num of edge; num of nodes", u.num_vertices(), u.num_edges())
     ### check whether subgraph is connected and is DAG
     _, hist2 = label_components(u, directed=False)
-    print(hist2, is_DAG(u))
     return u
 
 ### generate cell graph from pin graph
@@ -425,7 +360,6 @@ def get_cell_graph(pin_g, pin_cellid, g, e_type, e_id):
     u_pins = pin_g.get_vertices()
     u_cells = pin_cellid[u_pins]
     u_cells = np.unique(u_cells).astype(int)
-    print(u_cells.shape)
 
     # add cell2cell edge
     v_mask_cell = g.new_vp("bool")
@@ -439,8 +373,6 @@ def get_cell_graph(pin_g, pin_cellid, g, e_type, e_id):
     e_tar = e_ar[:,1]
     e_mask = (v_mask_cell.a[e_src] == True) & (v_mask_cell.a[e_tar] == True)
     e_mask_cell.a[e_ar[:,-1][e_mask]] = True
-    print("num of edges to add", e_mask.sum())
-    print("num of edges", e_mask_cell.a.sum())
 
     ### construct and check u_cell_g
     u_cell_g = get_subgraph(g, v_mask_cell, e_mask_cell)
@@ -449,7 +381,6 @@ def get_cell_graph(pin_g, pin_cellid, g, e_type, e_id):
 ### generate cell graph from cell ids
 def get_cell_graph_from_cells(u_cells, g, e_type, e_id):
     u_cells = np.unique(u_cells).astype(int)
-    print(u_cells.shape)
 
     # add cell2cell edge
     v_mask_cell = g.new_vp("bool")
@@ -463,8 +394,6 @@ def get_cell_graph_from_cells(u_cells, g, e_type, e_id):
     e_tar = e_ar[:,1]
     e_mask = (v_mask_cell.a[e_src] == True) & (v_mask_cell.a[e_tar] == True)
     e_mask_cell.a[e_ar[:,-1][e_mask]] = True
-    print("num of edges to add", e_mask.sum())
-    print("num of edges", e_mask_cell.a.sum())
 
     ### construct and check u_cell_g
     u_cell_g = get_subgraph(g, v_mask_cell, e_mask_cell)
