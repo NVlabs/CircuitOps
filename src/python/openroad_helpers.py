@@ -19,6 +19,7 @@ from openroad import Tech, Design, Timing
 import openroad as ord
 import pandas as pd
 from collections import defaultdict
+import time
 
 class CircuitOps_Tables:
   def __init__(self):
@@ -274,8 +275,8 @@ class CircuitOps_Tables:
 class CircuitOps_File_DIR:
   def __init__(self, CircuitOps_dir):
     ### SET DESIGN ###
+    #self.DESIGN_NAME = "ariane133"
     self.DESIGN_NAME = "gcd"
-    #self.DESIGN_NAME = "aes"
     #self.DESIGN_NAME = "bp_fe"
     #self.DESIGN_NAME = "bp_be"
     
@@ -296,7 +297,7 @@ class CircuitOps_File_DIR:
     self.SPEF_FILE = self.DESIGN_DIR + "/6_final.spef.gz"
 
     ### SET OUTPUT DIRECTORY ###
-    self.OUTPUT_DIR = self.CIRCUIT_OPS_DIR + "/IRs/" + self.PLATFORM + "/" + self.DESIGN_NAME
+    self.OUTPUT_DIR = self.CIRCUIT_OPS_DIR + "/IRs/" + self.PLATFORM + "/" + self.DESIGN_NAME+'_py'
     self.create_path()
 
     self.cell_file = self.OUTPUT_DIR + "/cell_properties.csv"
@@ -398,11 +399,11 @@ def print_pin_property_entry(outfile, pin_props):
   pin_entry.append(str(pin_props["y"]))#y
   pin_entry.append(str(pin_props["is_in_clk"]))#is_in_clk
   pin_entry.append("-1")#is_port
-  pin_entry.append("-1")#is_startpoint
+  pin_entry.append(str(pin_props["is_startpoint"]))#is_startpoint
   pin_entry.append(str(pin_props["is_endpoint"]))#is_endpoint
   pin_entry.append(str(pin_props["dir"]))#dir
-  pin_entry.append("-1")#maxcap
-  pin_entry.append("-1")#maxtran
+  pin_entry.append(str(pin_props["maxcap"]))#maxcap
+  pin_entry.append(str(pin_props["maxtran"]))#maxtran
   pin_entry.append(str(pin_props["num_reachable_endpoint"]))#num_reachable_endpoint
   pin_entry.append(pin_props["cell_name"])#cell_name
   pin_entry.append(pin_props["net_name"])#net_name
@@ -465,11 +466,29 @@ def Pin_Num_Reachable_Endpoint(ITerm, timing):
       num += 1
   return num
 
+def get_startpoints(design):
+    start_points = []
+    start_points_ptr = design.evalTclString("::sta::startpoints").split()
+    for sp in start_points_ptr:
+        start_point_pin = design.evalTclString("::sta::sta_to_db_pin "+sp)
+        if start_point_pin != "NULL":
+            start_point_inst_name = design.evalTclString("["+start_point_pin+" getInst] getName")
+            start_point_mterm_name = design.evalTclString("["+start_point_pin+" getMTerm] getName")
+            start_points.append(start_point_inst_name+"/"+start_point_mterm_name)
+    return start_points
+
+def get_clknets(design):
+    clk_nets = []
+    clk_nets_ptr = design.evalTclString("::sta::find_all_clk_nets").split()
+    clk_nets = [design.evalTclString(x+" getName") for x in clk_nets_ptr]
+    return clk_nets
+
 def get_tables_OpenROAD_API(data_root, write_table, return_df):
+  s1 = time.time()  
   _CircuitOps_File_DIR = CircuitOps_File_DIR(data_root)
   tech_design, design = load_design(_CircuitOps_File_DIR)
   timing = Timing(design)
-
+  log = open(_CircuitOps_File_DIR.OUTPUT_DIR+'/log','w')
   db = ord.get_db()
   chip = db.getChip()
   block = ord.get_db_block()
@@ -480,7 +499,8 @@ def get_tables_OpenROAD_API(data_root, write_table, return_df):
   #get default design corner#
   ###########################
   corner = timing.getCorners()[0]
-
+  startpoints = get_startpoints(design)
+  clk_nets = get_clknets(design)
   if write_table:
     header = "cell_name,is_seq,is_macro,is_in_clk,x0,y0,x1,y1,is_buf,is_inv,libcell_name,cell_static_power,cell_dynamic_power"
     with open(_CircuitOps_File_DIR.cell_file, "w") as file:
@@ -509,6 +529,7 @@ def get_tables_OpenROAD_API(data_root, write_table, return_df):
   ############################################
   block = ord.get_db_block()
   insts = block.getInsts()
+  t_b4_instsloop = time.time()
   for inst in insts:
     cell_dict = defaultdict()
     cell_name = inst.getName()
@@ -555,8 +576,8 @@ def get_tables_OpenROAD_API(data_root, write_table, return_df):
         #pin_property
         pin_name = design.getITermName(ITerm)
         pin_net_name = ITerm.getNet().getName()
-        pin_is_in_clk = 1 if design.isInClock(ITerm.getInst()) else 0
-
+        pin_is_in_clk = 1 if pin_net_name in clk_nets else 0
+        library_cell_pin = [MTerm for MTerm in ITerm.getInst().getMaster().getMTerms() if (ITerm.getInst().getName() + "/" + MTerm.getName()) == pin_name][0]
         pin_dict = defaultdict()
         pin_dict["net_name"] = pin_net_name
         pin_dict["pin_name"] = pin_name
@@ -571,12 +592,14 @@ def get_tables_OpenROAD_API(data_root, write_table, return_df):
           pin_dict["x"] = -1
           pin_dict["y"] = -1
         pin_dict["is_endpoint"] = timing.isEndpoint(ITerm)
+        pin_dict["is_startpoint"] = 1 if pin_name in startpoints else 0
         pin_dict["num_reachable_endpoint"] = Pin_Num_Reachable_Endpoint(ITerm, timing)
         pin_dict["pin_tran"] = timing.getPinSlew(ITerm)
         pin_dict["pin_slack"] = min(timing.getPinSlack(ITerm, timing.Fall, timing.Max), timing.getPinSlack(ITerm, timing.Rise, timing.Max))
         pin_dict["pin_rise_arr"] = timing.getPinArrival(ITerm, timing.Rise)
         pin_dict["pin_fall_arr"] = timing.getPinArrival(ITerm, timing.Fall)
-
+        pin_dict["maxcap"] = timing.getMaxCapLimit(library_cell_pin)
+        pin_dict["maxtran"] = timing.getMaxSlewLimit(library_cell_pin)
         if ITerm.isInputSignal():
           pin_dict["input_pin_cap"] = timing.getPortCap(ITerm, corner, timing.Max)
         else:
@@ -617,7 +640,7 @@ def get_tables_OpenROAD_API(data_root, write_table, return_df):
         print_ip_op_pairs(_CircuitOps_File_DIR.pin_pin_file, input_pins, output_pins, 0)
       if return_df:
         _CircuitOps_Tables.append_ip_op_pairs(input_pins, output_pins, 0)
-
+  t_aft_insts_loop = time.time()
   if write_table:
     header = "net_name,net_route_length,net_steiner_length,fanout,total_cap,net_cap,net_coupling,net_res"
     with open(_CircuitOps_File_DIR.net_file, "w") as file:
@@ -692,7 +715,7 @@ def get_tables_OpenROAD_API(data_root, write_table, return_df):
       if return_df:
         _CircuitOps_Tables.append_ip_op_cell_pairs(input_cells, output_cells)
         _CircuitOps_Tables.append_ip_op_pairs(input_pins, output_pins, 1)
-
+  t_aft_nets_loop = time.time()
   if write_table:
     header = "libcell_name,func_id,libcell_area,worst_input_cap,libcell_leakage,fo4_delay,fix_load_delay"
     with open(_CircuitOps_File_DIR.libcell_file, "w") as file:
@@ -724,8 +747,13 @@ def get_tables_OpenROAD_API(data_root, write_table, return_df):
         print_libcell_property_entry(_CircuitOps_File_DIR.libcell_file, libcell_dict)
       if return_df:
         _CircuitOps_Tables.append_libcell_property_entry(libcell_dict)
-
-
+  t_aft_libs_loop = time.time()
+  log.write("Time before insts loop: "+str(t_b4_instsloop-s1)+"\n")
+  log.write("Time taken by insts loop: "+str(t_aft_insts_loop-t_b4_instsloop)+"\n")
+  log.write("Time taken by nets loop: "+str(t_aft_nets_loop-t_aft_insts_loop)+"\n")
+  log.write("Time taken by libs loop: "+str(t_aft_libs_loop-t_aft_nets_loop)+"\n")
+  log.write("Total run time: "+str(t_aft_libs_loop-s1)+"\n")
+  log.close()
   return _CircuitOps_Tables.get_IR_tables() if return_df else None
 
 

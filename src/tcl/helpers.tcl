@@ -226,6 +226,9 @@ proc get_fix_load_load_cells {name} {
 
 proc get_fix_load_delay {libcell_name corner fix_load_insts} {
   set libcell [get_lib_cells $libcell_name]
+  if {$libcell == ""} {
+    return "NaN"
+  }
   set tmp_inst [::sta::make_instance tmp_inst $libcell]
   set tmp_db_inst [::sta::sta_to_db_inst $tmp_inst]
 
@@ -313,6 +316,9 @@ proc get_fix_load_delay {libcell_name corner fix_load_insts} {
 
 proc get_fo4_delay {libcell_name corner} {
   set libcell [get_lib_cells $libcell_name]
+  if {$libcell == ""} {
+    return "NaN"
+  }
   set tmp_inst [::sta::make_instance tmp_inst $libcell]
   set tmp_db_inst [::sta::sta_to_db_inst $tmp_inst]
   
@@ -458,6 +464,9 @@ proc get_pin_num_reachable_endpoint {pin_ITerm end_points} {
 
 proc get_libcell_worst_input_pin_cap {libcell_name corner} {
   set libcell [get_lib_cells $libcell_name]
+  if {$libcell == ""} {
+    return "NaN"
+  }
   set tmp_inst [::sta::make_instance tmp_inst $libcell]
   set tmp_db_inst [::sta::sta_to_db_inst $tmp_inst]
   set inst_ITerms [$tmp_db_inst getITerms]
@@ -488,6 +497,9 @@ proc get_libcell_worst_input_pin_cap {libcell_name corner} {
 
 proc get_libcell_leakage_power {libcell_name corner} {
   set libcell [get_lib_cells $libcell_name]
+  if {$libcell == ""} {
+    return "NaN"
+  }
   set tmp_inst [::sta::make_instance tmp_inst $libcell]
   set sta_cell [get_cell tmp_inst]
   set inst_power [::sta::instance_power $sta_cell $corner]
@@ -534,12 +546,15 @@ proc find_func_id {lib_dict libcell_name} {
   return [list 0 $func_id]
 }
 
-proc load_design {def netlist libs tech_lef lefs sdc design spef} {
+proc load_design {def netlist libs tech_lef lefs sdc design spef fp_log} {
   foreach libFile $libs {
+    puts $fp_log "Reading liberty file $libFile"
     read_liberty $libFile
   }
+  puts $fp_log "Reading tech lef $tech_lef"  
   read_lef $tech_lef
   foreach lef $lefs {
+    puts $fp_log "Reading lef file $lef"
     read_lef $lef
   }
   read_def $def
