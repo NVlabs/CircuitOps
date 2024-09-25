@@ -19,7 +19,7 @@ import argparse
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="Option to store the IR tables as .csv files.")
-  parser.add_argument("-w", default=True, action = 'store_true')
+  parser.add_argument("-w", default=False, action = 'store_true')
   args = parser.parse_args() 
   
   IRTables = get_tables_OpenROAD_API("./", args.w, True)
