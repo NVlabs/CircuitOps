@@ -95,7 +95,6 @@ foreach seq_cell $seq_cells {
 
 set post_seq_cells [clock seconds]
 
-puts "VG LOG: Entering insts loop"
 ############################################
 #iterate through each instance and its pins#
 #for the properties                        #
@@ -106,7 +105,6 @@ set maxcap [::sta::max_capacitance_check_limit]
 
 foreach inst $insts {
   set cell_name [$inst getName]
-  puts "VG LOG: Inside inst loop, insts: $cell_name\n"
   dict set cell_dict cell_name $cell_name
 
   set master_cell [$inst getMaster]
@@ -143,7 +141,6 @@ foreach inst $insts {
   ######################
   foreach ITerm $inst_ITerms {
     set pin_name [get_ITerm_name $ITerm]
-    puts "VG LOG: Inside pin loop of inst $cell_name and pin $pin_name\n"
     set pin [get_pin $pin_name]
     set pin_net [$ITerm getNet]
     if {$pin_net == "NULL"} {
@@ -242,7 +239,6 @@ foreach inst $insts {
   dict set cell_dict is_in_clk $cell_is_in_clk
   print_cell_property_entry $cell_outfile $cell_dict
 }
-puts "VG LOG: Exited insts loop\n"
 set post_insts_loop [clock seconds]
 
 close $cell_outfile
@@ -262,7 +258,6 @@ puts $net_pin_outfile "src,tar,src_type,tar_type"
 ######################
 foreach net $nets {
   set net_name [$net getName]
-  puts "VG LOG: Inside net loop net: $net_name\n"
   if {!([::sta::Net_is_power [get_net $net_name]] || [::sta::Net_is_ground [get_net $net_name]])} {
     set total_cap [::sta::Net_capacitance [get_net $net_name] $corner max]
     set net_ITerms [$net getITerms]
@@ -326,8 +321,8 @@ dict set func_dict start -1
 ############################
 #set fix load reference cap#
 ############################
-set fix_load_insts [get_fix_load_load_cells "sky130_fd_sc_hd__inv_1"]
-#set fix_load_insts [get_fix_load_load_cells "INV_X1"]
+#set fix_load_insts [get_fix_load_load_cells "sky130_fd_sc_hd__inv_1"]
+set fix_load_insts [get_fix_load_load_cells "INV_X1"]
 #set fix_load_insts [get_fix_load_load_cells "sg13g2_inv_1"]
 
 ###########################
@@ -339,7 +334,6 @@ foreach sta_lib [get_libs *] {
 
 foreach lib $libs {
   set lib_name [$lib getName]
-  puts "VG LOG: inside lib loop, lib: $lib_name\n"
   #if {[string first "NangateOpenCellLibrary"  $lib_name] != -1} {
   #  set sta_lib [get_libs "NangateOpenCellLibrary"]
   #} else {
