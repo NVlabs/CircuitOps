@@ -16,8 +16,11 @@
 source "./src/tcl/set_design.tcl"
 source "./src/tcl/helpers.tcl"
 
+set t1 [clock seconds]
 
-load_design $DEF_FILE $NETLIST_FILE $LIB_FILES $TECH_LEF_FILE $LEF_FILES $SDC_FILE $DESIGN_NAME $SPEF_FILE 
+set fp_log [open "${OUTPUT_DIR}/log" w]
+
+load_design $DEF_FILE $NETLIST_FILE $LIB_FILES $TECH_LEF_FILE $LEF_FILES $SDC_FILE $DESIGN_NAME $SPEF_FILE $RCX_FILE $fp_log
 source "${PLATFORM_DIR}/setRC.tcl"
 
 set db [ord::get_db]
@@ -26,6 +29,8 @@ set block [ord::get_db_block]
 set tech [ord::get_db_tech]
 set insts [$block getInsts]
 set nets [$block getNets]
+
+set post_load [clock seconds]
 
 #loop
 set cell_outfile [open $cell_file w]
@@ -46,6 +51,7 @@ puts $pin_pin_outfile "src,tar,src_type,tar_type,is_net,arc_delay"
 puts $cell_cell_outfile "src,tar,src_type,tar_type"
 
 puts " NUMBER OF INSTANCES [llength $insts]"
+puts $fp_log " NUMBER OF INSTANCES [llength $insts]"
 
 set clk_nets [::sta::find_all_clk_nets]
 
@@ -73,6 +79,9 @@ foreach endpoint $endpoints {
   set end_point_mterm_name [[$end_point_pin getMTerm] getName]
   dict set end_points "${end_point_inst_name}/${end_point_mterm_name}" 1
 }
+
+set post_ep_sp [clock seconds]
+
 ###########################
 #get default design corner#
 ###########################
@@ -83,10 +92,17 @@ set seq_cells [::sta::all_register]
 foreach seq_cell $seq_cells {
   dict set seq_cell_dict $seq_cell 1
 }
+
+set post_seq_cells [clock seconds]
+
 ############################################
 #iterate through each instance and its pins#
 #for the properties                        #
 ############################################
+#
+set maxtran [::sta::max_slew_check_limit]
+set maxcap [::sta::max_capacitance_check_limit]
+
 foreach inst $insts {
   set cell_name [$inst getName]
   dict set cell_dict cell_name $cell_name
@@ -100,10 +116,16 @@ foreach inst $insts {
   dict set cell_dict y0 [$BBox yMin]
   dict set cell_dict x1 [$BBox xMax]
   dict set cell_dict y1 [$BBox yMax]
-  dict set cell_dict libcell_name $master_name 
+  dict set cell_dict libcell_name $master_name
+  set master_libcell [get_lib_cells $master_name]
+  if {$master_libcell == ""} {
+      puts "WARN: libcell definition not found for cell : $master_name"
+      dict set cell_dict is_inv 0
+      dict set cell_dict is_buf 0
+  } else { 
   dict set cell_dict is_inv [get_property [get_lib_cells $master_name] is_inverter]
   dict set cell_dict is_buf [get_property [get_lib_cells $master_name] is_buffer]
-  
+  }
   set is_seq [dict exists $seq_cell_dict [get_cells $cell_name]]
   set is_macro [$master_cell isBlock];
   
@@ -118,11 +140,20 @@ foreach inst $insts {
   #iterate through pins#
   ######################
   foreach ITerm $inst_ITerms {
-    set pin_name [get_ITerm_name $ITerm] 
+    set pin_name [get_ITerm_name $ITerm]
     set pin [get_pin $pin_name]
-    set pin_net_name [[$ITerm getNet] getName]
+    set pin_net [$ITerm getNet]
+    if {$pin_net == "NULL"} {
+	puts "WARN: Pin $pin_name is not connected\n"
+	set pin_net_name "NA"
+	set is_connected 0
+    } else {
+    set pin_net_name [$pin_net getName]
+    set is_connected 1
+    }
 
     #skip VDD/VSS pins
+    if {$is_connected == 1} {
     if {!([::sta::Net_is_power [get_net $pin_net_name]] || [::sta::Net_is_ground [get_net $pin_net_name]])} {
       set is_in_clk [check_pin_is_in_clk $ITerm $clk_nets]
       if {$is_in_clk == 1} {
@@ -147,7 +178,7 @@ foreach inst $insts {
       dict set pin_dict pin_slack [get_property [get_pins $pin_name] "slack_max"]
       dict set pin_dict is_startpoint [dict exists $start_points $pin_name]
       dict set pin_dict is_endpoint [dict exists $end_points $pin_name]
-      dict set pin_dict maxtran [::sta::max_slew_check_limit]
+      dict set pin_dict maxtran $maxtran
       dict set pin_dict num_reachable_endpoint $num_reachable_endpoint
       dict set pin_dict x [get_pin_x $ITerm]
       dict set pin_dict y [get_pin_y $ITerm]
@@ -155,7 +186,26 @@ foreach inst $insts {
       dict set pin_dict pin_fall_arr [get_pin_arr [get_pin $pin_name] "fall"]
       dict set pin_dict pin_tran [get_pin_slew [get_pin $pin_name] $corner]
       dict set pin_dict input_pin_cap [get_pin_input_cap $pin_name $corner]
-      print_pin_property_entry $pin_outfile $pin_dict
+    } else {
+      continue
+    } 
+    } else {
+      dict set pin_dict net_name $pin_net_name
+      dict set pin_dict pin_name $pin_name
+      dict set pin_dict cell_name $cell_name
+      dict set pin_dict is_in_clk "NA"
+      dict set pin_dict dir [$ITerm isOutputSignal]
+      dict set pin_dict pin_slack [get_property [get_pins $pin_name] "slack_max"]
+      dict set pin_dict is_startpoint [dict exists $start_points $pin_name]
+      dict set pin_dict is_endpoint [dict exists $end_points $pin_name]
+      dict set pin_dict maxtran $maxtran
+      dict set pin_dict num_reachable_endpoint 0
+      dict set pin_dict x [get_pin_x $ITerm]
+      dict set pin_dict y [get_pin_y $ITerm]
+      dict set pin_dict pin_rise_arr [get_pin_arr [get_pin $pin_name] "rise"]
+      dict set pin_dict pin_fall_arr [get_pin_arr [get_pin $pin_name] "fall"]
+      dict set pin_dict pin_tran [get_pin_slew [get_pin $pin_name] $corner]
+      dict set pin_dict input_pin_cap [get_pin_input_cap $pin_name $corner]
     }
 
     #################################################
@@ -165,11 +215,14 @@ foreach inst $insts {
       puts $cell_pin_outfile "${pin_name},${cell_name},pin,cell"
       puts $cell_net_outfile "${pin_net_name},${cell_name},net,cell"
       lappend input_pins $pin_name
+      dict set pin_dict maxcap 0
     } elseif {[$ITerm isOutputSignal]} {
       puts $cell_pin_outfile "${cell_name},${pin_name},cell,pin"
       puts $cell_net_outfile "${cell_name},${pin_net_name},cell,net"
       lappend output_pins $pin_name
+      dict set pin_dict maxcap $maxcap
     }
+      print_pin_property_entry $pin_outfile $pin_dict
   }
   ##########################
   #build pin-pin edge table#
@@ -188,6 +241,8 @@ foreach inst $insts {
   dict set cell_dict is_in_clk $cell_is_in_clk
   print_cell_property_entry $cell_outfile $cell_dict
 }
+set post_insts_loop [clock seconds]
+
 close $cell_outfile
 close $cell_pin_outfile
 close $cell_net_outfile
@@ -254,30 +309,40 @@ close $net_pin_outfile
 close $pin_pin_outfile
 close $cell_cell_outfile
 
+set post_nets_loop [clock seconds]
+
 set libcell_outfile [open $libcell_file w]
 set header {libcell_name func_id libcell_area worst_input_cap libcell_leakage fo4_delay fix_load_delay}
 puts $libcell_outfile [join $header ","]
 
 set libs [$db getLibs]
+#set libs [get_libs *]
 set func_id -1
 dict set func_dict start -1
 
 ############################
 #set fix load reference cap#
 ############################
-set fix_load_insts [get_fix_load_load_cells "INV_X1"]
+#set fix_load_insts [get_fix_load_load_cells "sky130_fd_sc_hd__inv_1"]
+#set fix_load_insts [get_fix_load_load_cells "INV_X1"]
+set fix_load_insts [get_fix_load_load_cells $fixed_load_cell]
 
 ###########################
 #iterate through libraries#
 ###########################
+foreach sta_lib [get_libs *] {
+    ::sta::make_equiv_cells $sta_lib
+}
+
 foreach lib $libs {
   set lib_name [$lib getName]
-  if {[string first "NangateOpenCellLibrary"  $lib_name] != -1} {
-    set sta_lib [get_libs "NangateOpenCellLibrary"]
-  } else {
-    set sta_lib [get_libs $lib_name]
-  }
-  ::sta::make_equiv_cells $sta_lib 
+  #if {[string first "NangateOpenCellLibrary"  $lib_name] != -1} {
+  #  set sta_lib [get_libs "NangateOpenCellLibrary"]
+  #} else {
+  #  set sta_lib [get_libs $lib_name]
+  #}
+  #set sta_lib $lib
+  #::sta::make_equiv_cells $sta_lib 
   set lib_masters [$lib getMasters]
 
   foreach master $lib_masters {
@@ -317,9 +382,20 @@ foreach lib $libs {
 
 close $libcell_outfile
 
+set post_libs_loop [clock seconds]
+
 foreach fix_load_inst $fix_load_insts {
   ::sta::delete_instance $fix_load_inst
 }
+set final [clock seconds]
 
+puts $fp_log "Time after load design : $post_load ; Difference: [expr $post_load-$t1]"
+puts $fp_log "Time after getting start and endpoints : $post_ep_sp  ; Difference: [expr $post_ep_sp-$post_load]"
+puts $fp_log "Time after getting sequential cells : $post_seq_cells ; Difference: [expr $post_seq_cells-$post_ep_sp]"
+puts $fp_log "Time after insts loop : $post_insts_loop ; Difference: [expr $post_insts_loop-$post_seq_cells]"
+puts $fp_log "Time after nets loop : $post_nets_loop ; Difference: [expr $post_nets_loop-$post_insts_loop]"
+puts $fp_log "Time after libs loop : $post_libs_loop ; Difference: [expr $post_libs_loop-$post_nets_loop]"
+puts $fp_log "total time : [expr $final-$t1]"
+close $fp_log
 exit
 

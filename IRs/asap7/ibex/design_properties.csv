@@ -1,0 +1,2 @@
+design_name, die_width, die_height, die_area, core_width, core_height, core_area, insts_count, net_count, total_static_power, total_dynamic_power
+ibex_core,79.947,79.947,6391.522809,75.87,75.6,5735.772,48237,21749,2.204263665765878e-06,0.06494463119132661

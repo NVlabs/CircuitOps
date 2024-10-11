@@ -1,0 +1,2 @@
+design_name, die_width, die_height, die_area, core_width, core_height, core_area, insts_count, net_count, total_static_power, total_dynamic_power
+gcd,16.2,16.2,262.44,14.04,14.04,197.12159999999997,1387,453,3.137782686631063e-08,0.0007070567064711326

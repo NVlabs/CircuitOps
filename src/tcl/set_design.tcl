@@ -14,16 +14,17 @@
 # limitations under the License.
 
 ### SET DESIGN ###
+#set DESIGN_NAME NV_NVDLA_partition_a
 set DESIGN_NAME gcd
-#set DESIGN_NAME aes
-#set DESIGN_NAME bp_fe
-#set DESIGN_NAME bp_be
 
 ### SET PLATFORM ###
-set PLATFORM nangate45
+set PLATFORM asap7
 
 ### SET OUTPUT DIRECTORY ###
 set OUTPUT_DIR "./IRs/${PLATFORM}/${DESIGN_NAME}"
+
+### FIXED LOAD CELL
+set fixed_load_cell "INVx1_ASAP7_75t_R"
 
 ### INTERNAL DEFINTIONS: DO NOT MODIFY BELOW ####
 set CIRCUIT_OPS_DIR "./"
@@ -33,13 +34,13 @@ set PLATFORM_DIR "${CIRCUIT_OPS_DIR}/platforms/${PLATFORM}"
 file mkdir "${OUTPUT_DIR}"
 
 set DEF_FILE "${DESIGN_DIR}/6_final.def.gz"
-set TECH_LEF_FILE [glob ${PLATFORM_DIR}/lef/*tech.lef]
-#set LEF_FILES [glob ./platforms/$PLATFORM/lef/*macro.lef]
+set TECH_LEF_FILE [glob ${PLATFORM_DIR}/lef/*tech*lef]
 set LEF_FILES [glob ${PLATFORM_DIR}/lef/*.lef]
 set LIB_FILES [glob ${PLATFORM_DIR}/lib/*.lib]
 set SDC_FILE "${DESIGN_DIR}/6_final.sdc.gz"
-set NETLIST_FILE  "${DESIGN_DIR}/6_final.v"
+set NETLIST_FILE  "${DESIGN_DIR}/6_final.v.gz"
 set SPEF_FILE "${DESIGN_DIR}/6_final.spef.gz"
+set RCX_FILE "${PLATFORM_DIR}/rcx_patterns.rules"
 
 set cell_file "${OUTPUT_DIR}/cell_properties.csv"
 set libcell_file "${OUTPUT_DIR}/libcell_properties.csv"

@@ -1,0 +1,2 @@
+design_name, die_width, die_height, die_area, core_width, core_height, core_area, insts_count, net_count, total_static_power, total_dynamic_power
+riscv,377.17,377.17,142257.2089,374.44,372.64,139531.3216,20104,7041,2.972308148113259e-08,11.133803292710999
