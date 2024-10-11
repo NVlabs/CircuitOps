@@ -1,0 +1,2 @@
+design_name, die_width, die_height, die_area, core_width, core_height, core_area, insts_count, net_count, total_static_power, total_dynamic_power
+jpeg_encoder,158.165,158.165,25016.167224999997,154.062,153.9,23710.1418,169095,76367,5.589898663326551e-06,0.11821724884951161
