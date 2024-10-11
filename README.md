@@ -77,7 +77,7 @@ pip3 install -r requirements.txt
 ### Use CircuitOps
 
 
-#### Generate IRs from OpenROAD
+#### Generate IRs from OpenROAD using TCL
 
 ##### Set design and platform
 
@@ -89,6 +89,44 @@ The following command to generate the relations tables in the ./IRs/ directory.
 
 ```./path/to/binary/openroad ./src/tcl/generate_tables.tcl```
 
+#### Generate IRs from OpenROAD using Python
+Run the following command to generate the relations tables in the ./IRs/ directory.
+
+```./path/to/binary/openroad -python ./src/python/generate_tables.py -w 1 -d <design_name>  -t <tech_node>
+Arguments of python script:
+-w --> [0 | 1] Store IR tables into csv files. Default: 0
+-d --> To provide the design name for which IR table should be generated. Default: "gcd"
+-t --> To provide the technology node. Default: "nangate45"
+```
+
+#### Sample IR tables
+There are IR tables available for a number of designs in Nangate45, asap7 and sky130hd tech nodes in this git repo. This can be used by engineers for ML applications.
+
+The list of designs available are given in the table below along with post filler instance count and runtime to generate IR tables using python script for these designs.
+
+|Technode |Design              |# of instances|IR generation runtime (hrs)|Core utilisation|
+|---------|--------------------|--------------|---------------------------|----------------|
+|asap7    |gcd                 |1387          |0.0025                     |Default ORFS    |
+|asap7    |uart                |1679          |0.0033                     |Default ORFS    |
+|asap7    |mock-array_Element  |7994          |0.01                       |Default ORFS    |
+|asap7    |ibex                |48237         |0.7024                     |Default ORFS    |
+|asap7    |NV_NVDLA_partition_m|65353         |0.4797                     |30              |
+|asap7    |NV_NVDLA_partition_a|111207        |1.734                      |30              |
+|asap7    |jpeg                |169095        |3.2999                     |Default ORFS    |
+|asap7    |NV_NVDLA_partition_p|215140        |5.0925                     |30              |
+|asap7    |NV_NVDLA_partition_c|499581        |29.2552                    |30              |
+|nangate45|gcd                 |752           |0.0019                     |Default ORFS    |
+|nangate45|aes                 |30202         |0.3463                     |Default ORFS    |
+|nangate45|ibex                |32111         |0.3906                     |Default ORFS    |
+|nangate45|bp_fe               |96150         |0.9967                     |Default ORFS    |
+|nangate45|bp_be               |141468        |2.1523                     |Default ORFS    |
+|nangate45|jpeg                |141651        |4.1475                     |Default ORFS    |
+|nangate45|swerv               |193054        |10.1427                    |Default ORFS    |
+|sky130hd |gcd                 |1181          |0.0035                     |Default ORFS    |
+|sky130hd |riscv32i            |20104         |0.1235                     |Default ORFS    |
+|sky130hd |ibex                |42487         |0.5446                     |Default ORFS    |
+|sky130hd |aes                 |64389         |0.2879                     |Default ORFS    |
+|sky130hd |jpeg                |140975        |2.9748                     |Default ORFS    |
 
 #### Generate Datasets
 ```cd src/python```
