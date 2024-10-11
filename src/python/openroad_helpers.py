@@ -286,16 +286,16 @@ class CircuitOps_File_DIR:
     self.PLATFORM_DIR = self.CIRCUIT_OPS_DIR + "/platforms/" + self.PLATFORM
     self.RCX_RULE = self.CIRCUIT_OPS_DIR + "/platforms/" + self.PLATFORM + "/rcx_patterns.rules"
     
-    self.DEF_FILE = self.DESIGN_DIR + "/6_final.def"
+    self.DEF_FILE = self.DESIGN_DIR + "/6_final.def.gz"
     self.TECH_LEF_FILE = [os.path.join(root, file) for root, _, files in os.walk(self.PLATFORM_DIR + "/lef/") for file in files if file.endswith("tech.lef")]
     self.LEF_FILES = [os.path.join(root, file) for root, _, files in os.walk(self.PLATFORM_DIR + "/lef/") for file in files if file.endswith(".lef")]
     self.LIB_FILES = [os.path.join(root, file) for root, _, files in os.walk(self.PLATFORM_DIR + "/lib/") for file in files if file.endswith(".lib")]
-    self.SDC_FILE = self.DESIGN_DIR + "/6_final.sdc"
-    self.NETLIST_FILE = self.DESIGN_DIR + "/6_final.v"
-    self.SPEF_FILE = self.DESIGN_DIR + "/6_final.spef"
+    self.SDC_FILE = self.DESIGN_DIR + "/6_final.sdc.gz"
+    self.NETLIST_FILE = self.DESIGN_DIR + "/6_final.v.gz"
+    self.SPEF_FILE = self.DESIGN_DIR + "/6_final.spef.gz"
 
     ### SET OUTPUT DIRECTORY ###
-    self.OUTPUT_DIR = self.CIRCUIT_OPS_DIR + "/IRs/" + self.PLATFORM + "/" + self.DESIGN_NAME+'_py2'
+    self.OUTPUT_DIR = self.CIRCUIT_OPS_DIR + "/IRs/" + self.PLATFORM + "/" + self.DESIGN_NAME
     self.create_path()
 
     self.cell_file = self.OUTPUT_DIR + "/cell_properties.csv"

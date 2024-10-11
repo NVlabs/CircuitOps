@@ -325,7 +325,7 @@ dict set func_dict start -1
 ############################
 #set fix_load_insts [get_fix_load_load_cells "sky130_fd_sc_hd__inv_1"]
 #set fix_load_insts [get_fix_load_load_cells "INV_X1"]
-set fix_load_insts [get_fix_load_load_cells "INVx1_ASAP7_75t_R"]
+set fix_load_insts [get_fix_load_load_cells $fixed_load_cell]
 
 ###########################
 #iterate through libraries#
