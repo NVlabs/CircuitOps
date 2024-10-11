@@ -20,7 +20,7 @@ set t1 [clock seconds]
 
 set fp_log [open "${OUTPUT_DIR}/log" w]
 
-load_design $DEF_FILE $NETLIST_FILE $LIB_FILES $TECH_LEF_FILE $LEF_FILES $SDC_FILE $DESIGN_NAME $SPEF_FILE $fp_log
+load_design $DEF_FILE $NETLIST_FILE $LIB_FILES $TECH_LEF_FILE $LEF_FILES $SDC_FILE $DESIGN_NAME $SPEF_FILE $RCX_FILE $fp_log
 source "${PLATFORM_DIR}/setRC.tcl"
 
 set db [ord::get_db]
@@ -186,6 +186,8 @@ foreach inst $insts {
       dict set pin_dict pin_fall_arr [get_pin_arr [get_pin $pin_name] "fall"]
       dict set pin_dict pin_tran [get_pin_slew [get_pin $pin_name] $corner]
       dict set pin_dict input_pin_cap [get_pin_input_cap $pin_name $corner]
+    } else {
+      continue
     } 
     } else {
       dict set pin_dict net_name $pin_net_name
@@ -322,8 +324,8 @@ dict set func_dict start -1
 #set fix load reference cap#
 ############################
 #set fix_load_insts [get_fix_load_load_cells "sky130_fd_sc_hd__inv_1"]
-set fix_load_insts [get_fix_load_load_cells "INV_X1"]
-#set fix_load_insts [get_fix_load_load_cells "sg13g2_inv_1"]
+#set fix_load_insts [get_fix_load_load_cells "INV_X1"]
+set fix_load_insts [get_fix_load_load_cells "INVx1_ASAP7_75t_R"]
 
 ###########################
 #iterate through libraries#

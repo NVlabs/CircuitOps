@@ -546,7 +546,7 @@ proc find_func_id {lib_dict libcell_name} {
   return [list 0 $func_id]
 }
 
-proc load_design {def netlist libs tech_lef lefs sdc design spef fp_log} {
+proc load_design {def netlist libs tech_lef lefs sdc design spef rcx_rule fp_log} {
   foreach libFile $libs {
     puts $fp_log "Reading liberty file $libFile"
     read_liberty $libFile
@@ -558,13 +558,14 @@ proc load_design {def netlist libs tech_lef lefs sdc design spef fp_log} {
     read_lef $lef
   }
   read_def $def
-  read_spef $spef
   read_sdc $sdc
   set_propagated_clock [all_clocks]
   # Ensure all OR created (rsz/cts) instances are connected
   add_global_connection -net {VDD} -inst_pattern {.*} -pin_pattern {^VDD$} -power
   add_global_connection -net {VSS} -inst_pattern {.*} -pin_pattern {^VSS$} -ground
   global_connect
+  extract_parasitics -ext_model_file $rcx_rule
+  read_spef $spef
 }
 
 proc get_ITerm_name {ITerm} {

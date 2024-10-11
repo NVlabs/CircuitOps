@@ -18,8 +18,10 @@ import argparse
 
 
 if __name__ == "__main__":
-  parser = argparse.ArgumentParser(description="Option to store the IR tables as .csv files.")
-  parser.add_argument("-w", default=False, action = 'store_true')
+  parser = argparse.ArgumentParser(description="Options to store the IR tables as .csv files, give design name and tech node.")
+  parser.add_argument("-w", default=True, action = 'store_true')
+  parser.add_argument("-d", default="gcd", help="Give the design name")
+  parser.add_argument("-t", default="nangate45", help="Give the technology node")
   args = parser.parse_args() 
-  
-  IRTables = get_tables_OpenROAD_API("./", args.w, True)
+   
+  IRTables = get_tables_OpenROAD_API("./", args.w, True, args.d, args.t)
