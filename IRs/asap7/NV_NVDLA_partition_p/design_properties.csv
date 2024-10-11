@@ -1,0 +1,2 @@
+design_name, die_width, die_height, die_area, core_width, core_height, core_area, insts_count, net_count, total_static_power, total_dynamic_power
+NV_NVDLA_partition_p,194.072,194.072,37663.941184,189.972,189.81,36058.585320000006,215140,81893,8.755917505026429e-06,0.14150121087480205
