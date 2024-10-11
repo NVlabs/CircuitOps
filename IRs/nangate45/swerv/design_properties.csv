@@ -1,0 +1,2 @@
+design_name, die_width, die_height, die_area, core_width, core_height, core_area, insts_count, net_count, total_static_power, total_dynamic_power
+swerv,634.61,634.61,402729.8521,624.34,623.0,388963.82,193054,107435,0.004380607405179537,0.060854526242415795
