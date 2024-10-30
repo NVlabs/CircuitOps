@@ -1,0 +1,5 @@
+Time before insts loop: 147.79549026489258
+Time taken by insts loop: 68547.17977452278
+Time taken by nets loop: 36623.58575773239
+Time taken by libs loop: 0.07460141181945801
+Total run time: 105318.63562393188
