@@ -1,0 +1,2 @@
+design_name, die_width, die_height, die_area, core_width, core_height, core_area, insts_count, net_count, total_static_power, total_dynamic_power
+ariane,1500.0,1500.0,2250000.0,1437.92,1435.0,2063415.2000000002,567085,208385,0.03093997392808745,0.1678216421976952
