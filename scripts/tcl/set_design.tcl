@@ -21,7 +21,7 @@ set DESIGN_NAME aes_192
 set PLATFORM asap7
 
 ### SET OUTPUT DIRECTORY ###
-set OUTPUT_DIR "./IRs/${PLATFORM}/${DESIGN_NAME}_trial"
+set OUTPUT_DIR "./IRs/${PLATFORM}/${DESIGN_NAME}"
 
 ### FIXED LOAD CELL
 set fixed_load_cell "INVx1_ASAP7_75t_R"
