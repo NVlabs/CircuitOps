@@ -295,7 +295,7 @@ class CircuitOps_File_DIR:
     self.SPEF_FILE = self.DESIGN_DIR + "/6_final.spef.gz"
 
     ### SET OUTPUT DIRECTORY ###
-    self.OUTPUT_DIR = self.CIRCUIT_OPS_DIR + "/IRs/" + self.PLATFORM + "/" + self.DESIGN_NAME
+    self.OUTPUT_DIR = self.CIRCUIT_OPS_DIR + "/IRs/" + self.PLATFORM + "/" + self.DESIGN_NAME + "_trial"
     self.create_path()
 
     self.cell_file = self.OUTPUT_DIR + "/cell_properties.csv"

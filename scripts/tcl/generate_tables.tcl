@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-source "./src/tcl/set_design.tcl"
-source "./src/tcl/helpers.tcl"
+source "./scripts/tcl/set_design.tcl"
+source "./scripts/tcl/helpers.tcl"
 
 set t1 [clock seconds]
 

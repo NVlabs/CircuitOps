@@ -15,13 +15,13 @@
 
 ### SET DESIGN ###
 #set DESIGN_NAME NV_NVDLA_partition_a
-set DESIGN_NAME gcd
+set DESIGN_NAME aes_192
 
 ### SET PLATFORM ###
 set PLATFORM asap7
 
 ### SET OUTPUT DIRECTORY ###
-set OUTPUT_DIR "./IRs/${PLATFORM}/${DESIGN_NAME}"
+set OUTPUT_DIR "./IRs/${PLATFORM}/${DESIGN_NAME}_trial"
 
 ### FIXED LOAD CELL
 set fixed_load_cell "INVx1_ASAP7_75t_R"
