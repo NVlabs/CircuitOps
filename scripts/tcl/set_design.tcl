@@ -15,7 +15,7 @@
 
 ### SET DESIGN ###
 #set DESIGN_NAME NV_NVDLA_partition_a
-set DESIGN_NAME gcd
+set DESIGN_NAME aes_192
 
 ### SET PLATFORM ###
 set PLATFORM asap7
