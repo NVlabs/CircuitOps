@@ -1,5 +1,5 @@
 # CircuitOps
-(Notice: This Github repository is currently in the progress of being developed and some files are still missing. We will try to complete it ASAP. Thanks for your patience!)
+
 ## Introduction
 
 CircuitOps is a data infrastructure to facilitate dataset generation and model deployment in Generative AI (GAI)-based circuit optimization tasks. It mainly has the following contributes:
