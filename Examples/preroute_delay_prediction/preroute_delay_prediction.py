@@ -17,7 +17,7 @@ import numpy as np
 from graph_tool.all import *
 from numpy.random import *
 import time
-import sys, os
+import sys, os, argparse
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn import preprocessing
@@ -192,10 +192,15 @@ def evaluate_model(model, train_x, train_y, test_x, test_y):
 
 if __name__ == "__main__":
 
-     # Set the Circuitops path
-    cops_path = "/home/vgopal18/Circuitops/CircuitOps/IRs/"
-    design_name = "gcd"
-    platform = "nangate45"
+    parser = argparse.ArgumentParser(description="Options to run pre-route delay predictor, give design name and tech node.")
+    parser.add_argument("-d", default="gcd", help="Give the design name")
+    parser.add_argument("-t", default="nangate45", help="Give the technology node")
+    args = parser.parse_args()
+
+    # Set the Circuitops path
+    cops_path = os.path.dirname(os.path.abspath(__file__))+"/../../IRs/"
+    design_name = args.d
+    platform = args.t
 
     IR_path = f"{cops_path}/{platform}/{design_name}/"
     

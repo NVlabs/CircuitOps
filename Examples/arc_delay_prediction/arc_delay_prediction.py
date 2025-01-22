@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_squared_error, max_error, mean_absolute_error
-import sys, os
+import sys, os, argparse
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../../src/")
 
 from circuitops_api import *
@@ -84,10 +84,15 @@ def evaluate_model(model, X_test, Y_test):
 
 if __name__ == "__main__":
 
-     # Set the Circuitops path
-    cops_path = "/home/vgopal18/Circuitops/CircuitOps/IRs/"
-    design_name = "gcd"
-    platform = "nangate45"
+    parser = argparse.ArgumentParser(description="Options to run arc delay predictor, give design name and tech node.")
+    parser.add_argument("-d", default="gcd", help="Give the design name")
+    parser.add_argument("-t", default="nangate45", help="Give the technology node")
+    args = parser.parse_args()
+
+    # Set the Circuitops path
+    cops_path = os.path.dirname(os.path.abspath(__file__))+"/../../IRs/"
+    design_name = args.d
+    platform = args.t
 
     IR_path = f"{cops_path}/{platform}/{design_name}/"
     

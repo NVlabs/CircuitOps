@@ -31,14 +31,20 @@ from train_gnn import *
 from model import TimingGCN
 
 if __name__ == "__main__":
-    print("Constructing LUTs")
-    cops_path = "/home/vgopal18/Circuitops/CircuitOps/IRs/"
-    design_name = "gcd"
-    design_names = ["gcd"]
-    platform = "asap7"
 
+    parser = argparse.ArgumentParser(description="Options to run timingGCN, give design name and tech node.")
+    parser.add_argument("-d", default="gcd", help="Give the design name")
+    parser.add_argument("-t", default="asap7", help="Give the technology node")
+    parser.add_argument("-design_path", default="/home/vgopal18/OpenROAD/OpenROAD-flow-scripts/flow/results/asap7/gcd/base/", help="Give the path to the folder contianing .v and .def files of the design")
+    args = parser.parse_args()
+
+    # Set the Circuitops path
+    cops_path = os.path.dirname(os.path.abspath(__file__))+"/../../../IRs/"
+    design_name = args.d
+    design_names = [design_name]
+    platform = args.t
     IR_path = f"{cops_path}/{platform}/{design_name}/"
-    design_path = "/home/vgopal18/OpenROAD/OpenROAD-flow-scripts/flow/results/asap7/gcd/base/"
+    design_path = args.design_path
 
     construct_LUT_files(IR_path, design_path)
 
