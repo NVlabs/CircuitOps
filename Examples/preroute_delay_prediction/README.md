@@ -2,6 +2,9 @@
 This is a cross-stage timing predictor.
 It uses a random forest regressor to predict the post-route net delay between stages in a post-placement design.
 
+- **Features**: Driver capacitance, sink capacitance, distance between driver and target sink, driver input slew, and the mean distances of other sinks driven by the same driver excluding the target sink.
+- **Labels**: Stage delay
+
 This script is based on the paper:
 
 E. C. Barboza, N. Shukla, Y. Chen and J. Hu, "Machine Learning-Based Pre-Routing Timing Prediction with Reduced Pessimism," 2019 56th ACM/IEEE Design Automation Conference (DAC), Las Vegas, NV, USA, 2019, pp. 1-6.
