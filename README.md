@@ -11,9 +11,9 @@ downstream GAI applications;
 deployment of GAI models into production.
 
 Figure.1 depicts the overview of CircuitOps. Based on the Intermediate Representation of labeled property graphs, CircuitOps consists of two main modules: IR generation and dataset generation.
-The IR generation module transforms standard EDA files into LPGs
+The IR generation module transforms standard EDA files into IR tables and LPGs
 that store netlist information and are reused across tasks. The taskspecific dataset is constructed with the dataset generation module
-using its AI-friendly data structures and interfaces. CircuitOps also
+using its AI-friendly data structures and APIs. CircuitOps also
 provides a gRPC-based data transfer method facilitating inference
 of GAI models in production deployment.
 
@@ -81,7 +81,7 @@ pip3 install -r requirements.txt
 
 ##### Set design and platform
 
-Modify [set_design.tcl](./src/tcl/set_design.tcl) to name the design and platform. If you need to add more designs, add them to the designs directory and modify the set_design.tcl file appropriately.
+Modify [set_design.tcl](./scripts/tcl/set_design.tcl) to name the design and platform. If you need to add more designs, add them to the designs directory and modify the set_design.tcl file appropriately.
 
 Also modify the **fixed_load_cell** in set_design.tcl, which provides the type of cell that should be used to calculate the fixed load delay for cells.
 
@@ -89,13 +89,13 @@ Also modify the **fixed_load_cell** in set_design.tcl, which provides the type o
 
 The following command to generate the relations tables in the ./IRs/ directory.
 
-```./path/to/binary/openroad ./src/tcl/generate_tables.tcl```
+```./path/to/binary/openroad ./scripts/tcl/generate_tables.tcl```
 
 #### Generate IRs from OpenROAD using Python
 Run the following command to generate the relations tables in the ./IRs/ directory.
 
 ```
-./path/to/binary/openroad -python ./src/python/generate_tables.py -w 1 -d <design_name>  -t <tech_node>
+./path/to/binary/openroad -python ./scripts/python/generate_tables.py -w 1 -d <design_name>  -t <tech_node>
 
 Arguments of python script:
 -w --> [0 | 1] Store IR tables into csv files. Default: 0
@@ -133,6 +133,18 @@ The list of designs available are given in the table below along with post fille
 |sky130hd |jpeg                |140975        |178.49                      |Default ORFS    |
 
 #### Generate Datasets
+Once the IR tables are generated we can use CircuitOps APIs to generate application specific datasets. Import [circuitops_api.py](./src/circuitops_api.py)  file in your python code to use these APIs.
+
+Use the following command to create a CircuitData class which will contain all the properties and edge IR tables as classes. It also has the LPG object implemented using graph-tool. There are few APIs associated with each class and its documentation is given at[to be added].
+```
+circuit_data = CircuitData(IR_path)
+
+Arguments:
+IR_path --> Path to the directory with IR table files of a design.
+```
+ 
+Three example applications are given at ./Examples folder, to help understand how to use the CircuitOps APIs.
+
 ```cd src/python```
 
 ```python BT_sampling_OpenROAD.py ../../IRs/nangate45/gcd/ ../../datasets/```
