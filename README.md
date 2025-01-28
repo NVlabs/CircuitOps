@@ -24,7 +24,7 @@ of GAI models in production deployment.
 Fig. 1: CircuitOps overview. (a) shows the structure of CircuitOps; (b) illustrates the netlist labeled property graph backed by relational tables.
 
 
-## Getting Started
+## Initial Setup
 
 Download the CircuitOps repository as shown below:
 
@@ -93,7 +93,7 @@ The repository is organized as follows:
 3. **[Sample platforms](./platforms)**  
    Technology specific files for asap7, nangate45 and sky130hd technology nodes.
    
-4. **[Sample IR Tables](./sample_IRs)**  
+4. **[Sample IR Tables](./IRs)**  
    Pre-existing IR tables for various designs across a few technology nodes.
 
 5. **[CircuitOps APIs](./src)**  
@@ -104,7 +104,7 @@ The repository is organized as follows:
 
 ---
 
-## Getting Started
+## Quick Start Guide
 
 ### 1. Generate IR Tables
 - First step to use CircuitOps is to generate the IR tables for the desired designs.
@@ -113,7 +113,7 @@ The repository is organized as follows:
 
 ### 2. Sample IR Tables
 - Pre-existing IR tables for popular designs (e.g., gcd, aes, jpeg) across different technology nodes (asap7, nangate45, sky130hd) are available for direct use.  
-- Details on available designs and their specifications are in the [sample_IRs folder README](./sample_IRs/README.md).
+- Details on available designs and their specifications are in the [sample_IRs folder README](./IRs/README.md).
 
 ### 3. Use CircuitOps APIs
 - Once the IR tables are present for the desired designs CircuitOps APIs can be used to preprocess the data and geenrate custom application specific datasets.
