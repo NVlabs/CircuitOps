@@ -107,7 +107,6 @@ The repository is organized as follows:
 ## Quick Start Guide
 
 ### 1. Generate IR Tables
-- First step to use CircuitOps is to generate the IR tables for the desired designs.
 - Use **TCL scripts** or **Python scripts** in OpenROAD to generate IR tables.  
 - Detailed instructions are provided in the [scripts folder README](./scripts/README.md).
 
@@ -116,7 +115,7 @@ The repository is organized as follows:
 - Details on available designs and their specifications are in the [sample_IRs folder README](./IRs/README.md).
 
 ### 3. Use CircuitOps APIs
-- Once the IR tables are present for the desired designs CircuitOps APIs can be used to preprocess the data and geenrate custom application specific datasets.
+- Once the IR tables are present for the desired designs CircuitOps APIs can be used to preprocess the data and generate custom application specific datasets.
 - The `circuitops_api.py` provides a central API for accessing and analyzing IR tables.  
 - See the [src folder README](./src/README.md) for usage details.
 
