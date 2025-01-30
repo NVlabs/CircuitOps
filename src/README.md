@@ -3,11 +3,12 @@
 Once the IR tables are generated we can use CircuitOps APIs to generate application specific datasets. 
 Import [circuitops_api.py](./src/circuitops_api.py)  file in your python code to use these APIs.
 
-Use the following command to create a CircuitData class which will contain all the properties and edge IR tables as classes. 
-It also has the LPG object implemented using graph-tool. 
-There are few APIs associated with each class and its documentation is given at [CircuitOps_API_documentation.pdf](./docs/CircuitOps_API_documentation.pdf).
 
-Here’s an example:  
+Instantiate a **CircuitData** class object that contains all property and edge IR tables as individual classes.
+Additionally, it includes the LPG implemented using graph-tool.
+There are several APIs associated with each class and the detailed documentation of the APIs is provided in [CircuitOps_API_documentation.pdf](./docs/CircuitOps_API_documentation.pdf).
+
+Below is a usage example:  
 
 ```python
 from circuitops_api import *  
