@@ -1,7 +1,8 @@
 # Sample IR tables
 There are IR tables available for a number of designs in Nangate45, asap7 and sky130hd tech nodes in this git repo. This can be used by engineers for ML applications.
 
-The list of designs available are given in the table below along with post filler instance count and runtime to generate IR tables using python script for these designs.
+The list of designs available are given in the table below along with post filler instance count and runtime to generate IR tables using python script for these designs. Refer to the [OpenROAD-flow-scripts](https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts/tree/master/flow/designs) git repo for default utilisation values.
+
 
 |Technode |Design              |# of instances|IR generation runtime (mins)|Core utilisation|
 |---------|--------------------|--------------|----------------------------|----------------|
