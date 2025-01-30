@@ -24,7 +24,7 @@ of GAI models in production deployment.
 Fig. 1: CircuitOps overview. (a) shows the structure of CircuitOps; (b) illustrates the netlist labeled property graph backed by relational tables.
 
 
-## Getting Started
+## Initial Setup
 
 Download the CircuitOps repository as shown below:
 
@@ -76,81 +76,54 @@ pip3 install -r requirements.txt
 
 ### Use CircuitOps
 
+This repository provides scripts to generate IR tables, sample IR tables of open source designs, APIs for processing and analyzing these tables, and example applications demonstrating how to use CircuitOps.
 
-#### Generate IRs from OpenROAD using TCL
+---
 
-##### Set design and platform
+## Repository Structure
 
-Modify [set_design.tcl](./scripts/tcl/set_design.tcl) to name the design and platform. If you need to add more designs, add them to the designs directory and modify the set_design.tcl file appropriately.
+The repository is organized as follows:
 
-Also modify the **fixed_load_cell** in set_design.tcl, which provides the type of cell that should be used to calculate the fixed load delay for cells.
+1. **[Scripts for IR Generation](./scripts)**  
+   Scripts to generate IR tables using TCL or Python from OpenROAD.
 
-##### Run OpenROAD and TCL scripts to generate relational tables
+2. **[Sample designs](./designs)**  
+   Design files for various open source designs across a few technology nodes.
 
-The following command to generate the relations tables in the ./IRs/ directory.
+3. **[Sample platforms](./platforms)**  
+   Technology specific files for asap7, nangate45 and sky130hd technology nodes.
+   
+4. **[Sample IR Tables](./IRs)**  
+   Pre-existing IR tables for various designs across a few technology nodes.
 
-```./path/to/binary/openroad ./scripts/tcl/generate_tables.tcl```
+5. **[CircuitOps APIs](./src)**  
+   Python APIs for preprocessing the IR tables and LPGs to generate application specific datasets.
 
-#### Generate IRs from OpenROAD using Python
-Run the following command to generate the relations tables in the ./IRs/ directory.
+6. **[Example Applications](./examples)**  
+   Use case examples showcasing how to apply CircuitOps APIs.
 
-```
-./path/to/binary/openroad -python ./scripts/python/generate_tables.py -w 1 -d <design_name>  -t <tech_node>
+---
 
-Arguments of python script:
--w --> [0 | 1] Store IR tables into csv files. Default: 0
--d --> To provide the design name for which IR table should be generated. Default: "gcd"
--t --> To provide the technology node. Default: "nangate45"
-```
+## Quick Start Guide
 
-#### Sample IR tables
-There are IR tables available for a number of designs in Nangate45, asap7 and sky130hd tech nodes in this git repo. This can be used by engineers for ML applications.
+### 1. Generate IR Tables
+- Use **TCL scripts** or **Python scripts** in OpenROAD to generate IR tables.  
+- Detailed instructions are provided in the [scripts folder README](./scripts/README.md).
 
-The list of designs available are given in the table below along with post filler instance count and runtime to generate IR tables using python script for these designs.
+### 2. Sample IR Tables
+- Pre-existing IR tables for popular designs (e.g., gcd, aes, jpeg) across different technology nodes (asap7, nangate45, sky130hd) are available for direct use.  
+- Details on available designs and their specifications are in the [sample_IRs folder README](./IRs/README.md).
 
-|Technode |Design              |# of instances|IR generation runtime (mins)|Core utilisation|
-|---------|--------------------|--------------|----------------------------|----------------|
-|asap7    |gcd                 |1387          |0.15                        |Default ORFS    |
-|asap7    |uart                |1679          |0.20                        |Default ORFS    |
-|asap7    |mock-array_Element  |7994          |0.60                        |Default ORFS    |
-|asap7    |ibex                |48237         |42.14                       |Default ORFS    |
-|asap7    |NV_NVDLA_partition_m|65353         |28.78                       |30              |
-|asap7    |NV_NVDLA_partition_a|111207        |104.04                      |30              |
-|asap7    |jpeg                |169095        |197.99                      |Default ORFS    |
-|asap7    |NV_NVDLA_partition_p|215140        |305.55                      |30              |
-|asap7    |NV_NVDLA_partition_c|499581        |1755.31                     |30              |
-|nangate45|gcd                 |752           |0.11                        |Default ORFS    |
-|nangate45|aes                 |30202         |20.78                       |Default ORFS    |
-|nangate45|ibex                |32111         |23.44                       |Default ORFS    |
-|nangate45|bp_fe               |96150         |59.80                       |Default ORFS    |
-|nangate45|bp_be               |141468        |129.14                      |Default ORFS    |
-|nangate45|jpeg                |141651        |248.85                      |Default ORFS    |
-|nangate45|swerv               |193054        |608.56                      |Default ORFS    |
-|sky130hd |gcd                 |1181          |0.21                        |Default ORFS    |
-|sky130hd |riscv32i            |20104         |7.41                        |Default ORFS    |
-|sky130hd |ibex                |42487         |32.68                       |Default ORFS    |
-|sky130hd |aes                 |64389         |17.27                       |Default ORFS    |
-|sky130hd |jpeg                |140975        |178.49                      |Default ORFS    |
+### 3. Use CircuitOps APIs
+- Once the IR tables are present for the desired designs CircuitOps APIs can be used to preprocess the data and generate custom application specific datasets.
+- The `circuitops_api.py` provides a central API for accessing and analyzing IR tables.  
+- See the [src folder README](./src/README.md) for usage details.
 
-#### Generate Datasets
-Once the IR tables are generated we can use CircuitOps APIs to generate application specific datasets. Import [circuitops_api.py](./src/circuitops_api.py)  file in your python code to use these APIs.
+### 4. Example Applications
+- Some ML use cases are provided in the [examples folder](./examples). See the [examples folder README](./examples/README.md) for detailed information.
+- This can be helpful to understand how to use CircuitOps to generate custom datasets.
 
-Use the following command to create a CircuitData class which will contain all the properties and edge IR tables as classes. It also has the LPG object implemented using graph-tool. There are few APIs associated with each class and its documentation is given at[to be added].
-```
-circuit_data = CircuitData(IR_path)
-
-Arguments:
-IR_path --> Path to the directory with IR table files of a design.
-```
- 
-Three example applications are given at ./Examples folder, to help understand how to use the CircuitOps APIs.
-
-```cd src/python```
-
-```python BT_sampling_OpenROAD.py ../../IRs/nangate45/gcd/ ../../datasets/```
-
-#### gRPC-based Data Transfer
-
+---
 
 
 ## Cite this work
