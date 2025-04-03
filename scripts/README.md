@@ -22,10 +22,10 @@ The following command to generate the relations tables in the ./IRs/ directory.
 ```./path/to/binary/openroad ./scripts/tcl/generate_tables.tcl```
 
 ### Generate IRs from OpenROAD using Python
-Run the following command to generate the relations tables in the ./IRs/ directory.
+Run the following command to generate the relations tables in the ./IRs/ directory from the top level CircuitOps folder.
 
 ```
-./path/to/binary/openroad -python ./scripts/python/generate_tables.py -w 1 -d <design_name>  -t <tech_node>
+./src/OpenROAD/build/src/openroad -python ./scripts/python/generate_tables.py -w 1 -d <design_name>  -t <tech_node>
 
 Arguments of python script:
 -w --> [0 | 1] Store IR tables into csv files. Default: 0

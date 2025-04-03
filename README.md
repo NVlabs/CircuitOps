@@ -35,43 +35,13 @@ cd CircuitOps
 ```
 
 
-### Install CircuitOps
+### Install CircuitOps Using Docker
 
-
-#### Dependencies
-
-The following dependencies are needed by CircuitOps. OpenROAD is required for EDA tools file parsing and generating properties.
-
-- python3.7
-- pip3
-- OpenROAD
-
-
-#### Install OpenROAD
-
-Refer to the dependencies of the OpenROAD Project and instrcutions [here](https://openroad.readthedocs.io/en/latest/main/README.html#build-openroad).
-
-We use OpenROAD to read in standard EDA files and generate relational tables as IRs.
-
-
-TLDR instructions to build OpenROAD is listed below:
+The following technique assumes you have docker installed on your machine. If you do not have then install docker from [here](https://docs.docker.com/engine/install/). Build the docker image and run using the following commands:
 
 ```
-cd CircuitOps/src/OpenROAD
-mkdir build
-cd build
-cmake ..
-make -j
-```
-
-#### Install CircuitOps in Bash
-
-From the IRs, CircuitOps uses the relational tables generated from OpenROAD and creates LPGs and datasets.  Installation of Python scripts of Circuit ops in described below through a virtual environment and pip.  From the CircuitOps top level directory run the following commands:
-
-```
-python3 -m venv circuitops
-source circuitops/bin/activate
-pip3 install -r requirements.txt
+docker build -t circuitops_img .
+docker run -it --name <container name> circuitops_img 
 ```
 
 ### Use CircuitOps
