@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from openroad_helpers import get_tables_OpenROAD_API
-import argparse
+import argparse, os
 
 
 if __name__ == "__main__":
@@ -25,3 +25,5 @@ if __name__ == "__main__":
   args = parser.parse_args() 
    
   IRTables = get_tables_OpenROAD_API("./", args.w, True, args.d, args.t)
+  os._exit(0)
+  
